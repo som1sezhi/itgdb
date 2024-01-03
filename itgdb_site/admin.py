@@ -1,26 +1,21 @@
 from datetime import datetime
-from django.contrib.admin import AdminSite
-from django.core import serializers
+from django.contrib import admin
 from django.core.files.storage import default_storage
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
-from django.urls import path
+from admin_extra_buttons.api import ExtraButtonsMixin, button
+from django_celery_results.admin import TaskResultAdmin
+from django_celery_results.models import TaskResult
 
 from .models import Tag, Pack, Song, Chart
 from .forms import PackUploadForm
 from .tasks import process_pack_upload
 
-class ItgdbAdminSite(AdminSite):
-    site_header = 'yeah woo'
-
-    def get_urls(self):
-        urls = super().get_urls()
-        my_urls = [
-            path('pack_upload/', self.admin_view(self.pack_upload_view))
-        ]
-        return my_urls + urls
-    
-    def pack_upload_view(self, req):
+@admin.register(Pack)
+class TestModelAdmin(ExtraButtonsMixin, admin.ModelAdmin):
+    @button()
+    def pack_upload(self, req):
+        context = self.get_common_context(req)
         if req.method == 'POST':
             form = PackUploadForm(req.POST, req.FILES)
             if form.is_valid():
@@ -40,17 +35,18 @@ class ItgdbAdminSite(AdminSite):
                 return HttpResponseRedirect('/admin/')
         else:
             form = PackUploadForm()
-        context = dict(
-            self.each_context(req),
-            text='hello',
-            form=form
-        )
+        context['text'] = 'hello'
+        context['form'] = form
         return render(req, 'admin/itgdb_site/pack_upload.html', context)
 
 
+admin.site.unregister(TaskResult)
 
-admin_site = ItgdbAdminSite()
-admin_site.register(Pack)
-admin_site.register(Song)
-admin_site.register(Chart)
-admin_site.register(Tag)
+@admin.register(TaskResult)
+class CustomTaskResultAdmin(TaskResultAdmin):
+    list_display = ('task_id', 'task_name', 'date_done',
+                    'status', 'task_args')
+
+admin.site.register(Song)
+admin.site.register(Chart)
+admin.site.register(Tag)

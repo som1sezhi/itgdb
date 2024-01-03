@@ -24,6 +24,7 @@ def process_pack_upload(pack_data, filename):
     # TODO: likely susceptible to malicious zips (zip bombs, etc.)
     with zipfile.ZipFile(file) as z:
         z.extractall(extract_path)
+    default_storage.delete(filename)
 
     # TODO: we assume that the zip contains only a pack directory, with all
     # the song folders inside. is this a good assumption?
@@ -68,12 +69,11 @@ def process_pack_upload(pack_data, filename):
                     steps_type = Chart.steps_type_to_int(chart.stepstype),
                     difficulty = Chart.difficulty_str_to_int(chart.difficulty),
                     meter = int(chart.meter),
-                    credit = chart.credit,
+                    credit = chart.get('CREDIT'),
                     description = chart.description,
-                    chart_name = chart.chartname,
+                    chart_name = chart.get('CHARTNAME'),
                     chart_hash = chart_hash,
                     **counts
                 )
 
     shutil.rmtree(extract_path)
-    default_storage.delete(filename)

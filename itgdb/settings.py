@@ -32,13 +32,14 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'itgdb_site.apps.ItgdbSiteConfig',
-    # 'django.contrib.admin',
-    'itgdb_site.apps.ItgdbSiteAdminConfig',
+    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'admin_extra_buttons',
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -133,4 +134,6 @@ MEDIA_ROOT = BASE_DIR / 'uploads/'
 
 # Celery settings
 CELERY_BROKER_URL = 'redis://localhost:6380'
-CELERY_RESULT_BACKEND = 'redis://localhost:6380'
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_CACHE_BACKEND = 'django-cache'
+CELERY_RESULT_EXTENDED = True
