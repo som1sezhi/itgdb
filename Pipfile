@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+celery = "==5.3.6"
+django = "==5.0"
+django-admin-extra-buttons = "==1.5.7"
+django-celery-results = "==2.5.1"
+mutagen = "==1.47.0"
+psycopg = "==3.1.14"
+redis = "==5.0.1"
+simfile = "==2.1.1"
+
+[dev-packages]
+
+[requires]
+python_version = "3.10"
