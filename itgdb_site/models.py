@@ -11,6 +11,14 @@ def get_simfilemedia_storage():
     return storages['simfilemedia']
 
 
+class ImageFile(models.Model):
+    pack = models.ForeignKey('Pack', on_delete=models.CASCADE, blank=True, null=True)
+    image = models.ImageField(storage=get_simfilemedia_storage)
+
+    def __str__(self):
+        return f'[{self.pack.name}] {self.image.name.split("_", 1)[1]}'
+
+
 class Tag(models.Model):
     name = models.CharField(max_length=32, unique=True)
 
@@ -19,9 +27,13 @@ class Tag(models.Model):
 
 
 class Pack(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, blank=True)
     release_date = models.DateTimeField()
     tags = models.ManyToManyField(Tag, blank=True)
+    banner = models.ForeignKey(
+        ImageFile, on_delete=models.SET_NULL, related_name='banner_packs',
+        blank=True, null=True
+    )
 
     def __str__(self):
         return self.name
@@ -43,6 +55,22 @@ class Song(models.Model):
     length = models.FloatField()
     release_date = models.DateTimeField()
     simfile = models.FileField(storage=get_simfiles_storage)
+    banner = models.ForeignKey(
+        ImageFile, on_delete=models.SET_NULL, related_name='banner_songs',
+        blank=True, null=True
+    )
+    bg = models.ForeignKey(
+        ImageFile, on_delete=models.SET_NULL, related_name='bg_songs',
+        blank=True, null=True
+    )
+    cdtitle = models.ForeignKey(
+        ImageFile, on_delete=models.SET_NULL, related_name='cdtitle_songs',
+        blank=True, null=True
+    )
+    jacket = models.ForeignKey(
+        ImageFile, on_delete=models.SET_NULL, related_name='jacket_songs',
+        blank=True, null=True
+    )
 
     def __str__(self):
         return f'[{self.pack.name}] {self.title} {self.subtitle}'
@@ -103,8 +131,3 @@ class Chart(models.Model):
             Chart.STEPS_TYPE_CHOICES[self.steps_type],
             Chart.DIFFICULTY_CHOICES[self.difficulty]
         )
- 
-
-class ImageFile(models.Model):
-    pack = models.ForeignKey(Pack, on_delete=models.CASCADE, null=True)
-    image = models.ImageField(storage=get_simfilemedia_storage)

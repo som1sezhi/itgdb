@@ -16,6 +16,7 @@ boto3 = "*"
 django-storages = "*"
 pillow = "*"
 django-cleanup = "*"
+opencv-python-headless = "*"
 
 [dev-packages]
 localstack = "*"
