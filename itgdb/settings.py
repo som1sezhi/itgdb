@@ -31,7 +31,6 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'itgdb_site.apps.ItgdbSiteConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -40,6 +39,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'admin_extra_buttons',
     'django_celery_results',
+    'itgdb_site.apps.ItgdbSiteConfig',
+    'storages',
+    'django_cleanup.apps.CleanupConfig', # keep last
 ]
 
 MIDDLEWARE = [
@@ -137,3 +139,36 @@ CELERY_BROKER_URL = 'redis://localhost:6380'
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
 CELERY_RESULT_EXTENDED = True
+
+
+# Storages
+base_bucket_storage_options = {
+    'bucket_name': 'testwebsite',
+    'endpoint_url': 'http://s3.localhost.localstack.cloud:4566',
+    'access_key': 'fake',
+    'secret_key': 'fake',
+}
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+    },
+    'simfiles': {
+        'BACKEND': 'storages.backends.s3.S3Storage',
+        'OPTIONS': {
+            **base_bucket_storage_options,
+            'location': 'sims/',
+            'default_acl': 'private',
+        }
+    },
+    'simfilemedia': {
+        'BACKEND': 'storages.backends.s3.S3Storage',
+        'OPTIONS': {
+            **base_bucket_storage_options,
+            'location': 'images/',
+            'default_acl': 'public-read',
+        }
+    },
+}

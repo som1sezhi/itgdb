@@ -7,7 +7,7 @@ from admin_extra_buttons.api import ExtraButtonsMixin, button
 from django_celery_results.admin import TaskResultAdmin
 from django_celery_results.models import TaskResult
 
-from .models import Tag, Pack, Song, Chart
+from .models import Tag, Pack, Song, Chart, ImageFile
 from .forms import PackUploadForm
 from .tasks import process_pack_upload
 
@@ -50,3 +50,4 @@ class CustomTaskResultAdmin(TaskResultAdmin):
 admin.site.register(Song)
 admin.site.register(Chart)
 admin.site.register(Tag)
+admin.site.register(ImageFile)

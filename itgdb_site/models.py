@@ -1,4 +1,14 @@
+from django.core.files.storage import storages
 from django.db import models
+
+# Callables to pass into the storage argument of a FileField/ImageField.
+# Using a callable prevents the storage from being hardcoded into
+# database migrations.
+def get_simfiles_storage():
+    return storages['simfiles']
+
+def get_simfilemedia_storage():
+    return storages['simfilemedia']
 
 
 class Tag(models.Model):
@@ -32,6 +42,7 @@ class Song(models.Model):
     max_display_bpm = models.FloatField(null=True, blank=True)
     length = models.FloatField()
     release_date = models.DateTimeField()
+    simfile = models.FileField(storage=get_simfiles_storage)
 
     def __str__(self):
         return f'[{self.pack.name}] {self.title} {self.subtitle}'
@@ -92,4 +103,8 @@ class Chart(models.Model):
             Chart.STEPS_TYPE_CHOICES[self.steps_type],
             Chart.DIFFICULTY_CHOICES[self.difficulty]
         )
+ 
 
+class ImageFile(models.Model):
+    pack = models.ForeignKey(Pack, on_delete=models.CASCADE, null=True)
+    image = models.ImageField(storage=get_simfilemedia_storage)

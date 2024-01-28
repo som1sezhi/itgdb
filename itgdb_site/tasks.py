@@ -2,6 +2,7 @@ import os
 import shutil
 import zipfile
 from django.conf import settings
+from django.core.files import File
 from django.core.files.storage import default_storage
 from django.db import transaction
 import simfile
@@ -39,13 +40,16 @@ def process_pack_upload(pack_data, filename):
         p.save()
         p.tags.add(*pack_data['tags'])
         for sim, sim_path in simfile.openpack(pack_path):
-            sim_dir = os.path.dirname(sim_path)
+            sim_dir, sim_filename = os.path.split(sim_path)
+            sim_last_dir = os.path.basename(os.path.normpath(sim_dir))
             music_path = os.path.join(sim_dir, sim.music)
             audio = mutagen.File(music_path)
             bpm = displaybpm(sim, ignore_specified=True)
             disp = displaybpm(sim)
             bpm_range = (bpm.min, bpm.max)
             disp_range = (disp.min, disp.max)
+            f = open(sim_path)
+            storage_filename = f'{p.id}_{p.name}__{sim_last_dir}__{sim_filename}'
             s = p.song_set.create(
                 title = sim.title,
                 subtitle = sim.subtitle,
@@ -59,8 +63,10 @@ def process_pack_upload(pack_data, filename):
                 min_display_bpm = disp_range[0],
                 max_display_bpm = disp_range[1],
                 length = audio.info.length,
-                release_date = p.release_date
+                release_date = p.release_date,
+                simfile = File(f, name=storage_filename)
             )
+            f.close()
             for chart in sim.charts:
                 chart_hash = get_hash(sim, chart)
                 counts = get_counts(sim, chart)
