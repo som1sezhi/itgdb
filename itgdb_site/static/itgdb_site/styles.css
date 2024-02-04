@@ -1,0 +1,112 @@
+:root {
+    --itgdb-row-height: 3rem;
+    --itgdb-diff-0: rgba(169, 62, 222, 0.6);
+    --itgdb-diff-1: rgba(78, 176, 63, 0.6);
+    --itgdb-diff-2: rgba(246, 205, 83, 0.6);
+    --itgdb-diff-3: rgba(212, 64, 64, 0.6);
+    --itgdb-diff-4: rgba(67, 147, 213, 0.6);
+    --itgdb-diff-5: rgba(168, 168, 168, 0.6);
+}
+
+.bg-image {
+    filter: blur(32px) opacity(50%);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: 0;
+    z-index: 1;
+}
+
+.main-content {
+    z-index: 999;
+    position: relative;
+}
+
+a {
+    text-decoration: none;
+}
+
+.song-artist, .song-subtitle {
+    font-size: 0.75em;
+}
+
+.song-bpm {
+    font-size: 0.85em;
+}
+
+.song-bn-col {
+    width: calc(var(--itgdb-row-height) * 2.56 + 0.5em);
+}
+
+td.song-bn-cell {
+    height: var(--itgdb-row-height);
+    padding: 0;
+}
+
+.song-bn-cell img {
+    height: 100%;
+}
+
+.song-name-col {
+    min-width: 12em;
+}
+
+th.song-diff {
+    width: 3.6em;
+    min-width: 3.2em;
+    font-size: 0.7em;
+}
+
+.bootstrap-table .fixed-table-container .table thead th .sortable {
+    padding: 0.5em;
+    padding-right: 19px !important;
+}
+
+td.song-meter {
+    font-weight: 600;
+    border-width: var(--bs-border-width);
+    padding: 0;
+}
+
+td.song-meter > div {
+    width: 100%;
+    padding: calc((var(--itgdb-row-height) - 1em) / 2 - 0.2em) 0;
+}
+
+/* overrides bootstrap tooltip */
+.tooltip-inner {
+    min-width: 100px;
+    max-width: 100%; 
+}
+
+td.diff-0 {
+    background-color: var(--itgdb-diff-0);
+}
+
+td.diff-1 {
+    background-color: var(--itgdb-diff-1);
+}
+
+td.diff-2 {
+    background-color: var(--itgdb-diff-2);
+}
+
+td.diff-3 {
+    background-color: var(--itgdb-diff-3);
+}
+
+td.diff-4 {
+    background-color: var(--itgdb-diff-4);
+}
+
+td.diff-5 {
+    background-color: var(--itgdb-diff-5);
+}
+
+.difficulty-chart-container {
+    height: 30rem;
+}

@@ -1,8 +1,9 @@
 from django.urls import path
 
 from . import views
-# from .admin import admin_site
 
+app_name = 'itgdb_site'
 urlpatterns = [
-    path('', views.index, name='index'),
+    path('', views.IndexView.as_view(), name='index'),
+    path('packs/<int:pk>/', views.PackDetailView.as_view(), name='pack_detail'),
 ]

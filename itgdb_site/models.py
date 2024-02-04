@@ -74,6 +74,20 @@ class Song(models.Model):
 
     def __str__(self):
         return f'[{self.pack.name}] {self.title} {self.subtitle}'
+    
+    def get_charts_by_difficulty(self):
+        charts = [
+            [None, None, None, None, None, []]
+            for _ in range(2)
+        ]
+        for chart in self.chart_set.all():
+            type_idx = chart.steps_type - 1
+            diff = chart.difficulty
+            if diff == 5: # edit diff
+                charts[type_idx][diff].append(chart)
+            else:
+                charts[type_idx][diff] = chart
+        return charts
 
 
 class Chart(models.Model):

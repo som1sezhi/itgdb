@@ -1,0 +1,15 @@
+{% extends 'itgdb_site/base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+{% if latest_uploaded_packs %}
+    <ul>
+    {% for pack in latest_uploaded_packs %}
+        <li><a href="{% url 'itgdb_site:pack_detail' pack.id %}">{{ pack.name }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No packs yet!</p>
+{% endif %}
+{% endblock %}

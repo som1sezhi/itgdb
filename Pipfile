@@ -17,6 +17,7 @@ django-storages = "*"
 pillow = "*"
 django-cleanup = "*"
 opencv-python-headless = "*"
+django-debug-toolbar = "*"
 
 [dev-packages]
 localstack = "*"

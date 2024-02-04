@@ -39,12 +39,16 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'admin_extra_buttons',
     'django_celery_results',
-    'itgdb_site.apps.ItgdbSiteConfig',
+    'debug_toolbar',
+    'itgdb_site',
     'storages',
     'django_cleanup.apps.CleanupConfig', # keep last
 ]
 
 MIDDLEWARE = [
+    # place as early as possible, but before any response-encoding middleware
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -130,6 +134,12 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# https://django-debug-toolbar.readthedocs.io/en/latest/installation.html
+if DEBUG:
+    import socket
+    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+    INTERNAL_IPS = [ip[: ip.rfind(".")] + ".1" for ip in ips] + ["127.0.0.1", "10.0.2.2"]
 
 MEDIA_ROOT = BASE_DIR / 'uploads/'
 
