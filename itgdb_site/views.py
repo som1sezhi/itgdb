@@ -35,6 +35,10 @@ class PackDetailView(generic.DetailView):
         charts = Chart.objects.filter(song__pack=self.object)
         ctx['chart_count'] = charts.count()
 
+        ctx['show_double_nov'] = charts.filter(
+            steps_type=2, difficulty=0
+        ).exists()
+
         # count how many charts are there for each meter/difficulty/stepstype
         # so we can put the counts in a cool graph
         diff_counts_queryset = charts.values(

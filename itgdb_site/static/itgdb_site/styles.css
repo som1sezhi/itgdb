@@ -30,12 +30,12 @@ a {
     text-decoration: none;
 }
 
-.song-artist, .song-subtitle {
-    font-size: 0.75em;
+.difficulty-chart-container {
+    height: 18rem;
 }
 
-.song-bpm {
-    font-size: 0.85em;
+.song-artist, .song-subtitle {
+    font-size: 0.8em;
 }
 
 .song-bn-col {
@@ -61,6 +61,7 @@ th.song-diff {
     font-size: 0.7em;
 }
 
+/* overrides bootstrap-table styles to make it more compact */
 .bootstrap-table .fixed-table-container .table thead th .sortable {
     padding: 0.5em;
     padding-right: 19px !important;
@@ -105,8 +106,4 @@ td.diff-4 {
 
 td.diff-5 {
     background-color: var(--itgdb-diff-5);
-}
-
-.difficulty-chart-container {
-    height: 30rem;
 }
