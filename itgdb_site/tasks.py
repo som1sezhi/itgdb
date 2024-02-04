@@ -17,6 +17,25 @@ from .models import Pack, Song, Chart, ImageFile
 from .utils.charts import get_hash, get_counts
 
 
+def get_pack_banner_path(pack_path, simfile_pack):
+    # NOTE: currently the simfile library (2.1.1) doesn't reproduce the exact 
+    # behavior of stepmania when looking for pack banners.
+    # my c++ knowledge is lacking, but from looking at the stepmania source,
+    # i think it draws from a c++ set when iterating through directory items,
+    # which are always sorted alphabetically. my tests so far seem to
+    # match this behavior. thus it seems we need to sort the list of items
+    # looking through them.
+    IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".bmp")
+    for image_type in IMAGE_EXTS:
+        for item in sorted(os.listdir(pack_path), key=str.casefold):
+            if item.lower().endswith(image_type):
+                return os.path.join(pack_path, item)
+
+    # let's just use simfile's implementation for the case where
+    # the banner is outside the pack directory
+    return simfile_pack.banner()
+
+
 def get_image(path, pack, cache):
     if not path or not os.path.isfile(path):
         return None
@@ -69,6 +88,8 @@ def process_pack_upload(pack_data, filename):
         pack_name = next(os.walk(extract_path))[1][0]
         pack_path = os.path.join(extract_path, pack_name)
         image_cache = {}
+        # TODO: handle uploaded image/sim files better on rollback
+        # https://github.com/un1t/django-cleanup/issues/43
         with transaction.atomic():
             simfile_pack = SimfilePack(pack_path)
             p = Pack(
@@ -77,7 +98,8 @@ def process_pack_upload(pack_data, filename):
             )
             p.save()
             p.tags.add(*pack_data['tags'])
-            p.banner = get_image(simfile_pack.banner(), p, image_cache)
+            pack_bn_path = get_pack_banner_path(pack_path, simfile_pack)
+            p.banner = get_image(pack_bn_path, p, image_cache)
             p.save()
 
             for simfile_dir in simfile_pack.simfile_dirs():

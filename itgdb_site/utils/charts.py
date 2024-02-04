@@ -17,7 +17,7 @@ def _normalize_decimal(decimal):
 def _normalize_float_digits(param):
     param_parts = []
     for beat_bpm in re.findall('[^,]+', param):
-        m = re.match('(.+)=(.+)', beat_bpm)
+        m = re.search('(.+)=(.+)', beat_bpm)
         normd = _normalize_decimal(m[1]) + '=' + _normalize_decimal(m[2])
         param_parts.append(normd)
     return ','.join(param_parts)
