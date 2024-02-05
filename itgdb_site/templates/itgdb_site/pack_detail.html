@@ -26,6 +26,7 @@
   </div>
   <div class="col-12 col-md-6">
     <h4 class="mb-3">Difficulty distribution</h4>
+    {% if difficulty_data.1.datasets and difficulty_data.2.datasets %}
     <div class="row justify-content-center mb-3">
       <div class="col-5 btn-group" id="diffChartSelect" role="group" aria-label="Choose steps type for graph">
         <input type="radio" class="btn-check" name="diffchartstepstype" id="diffChartSingles" autocomplete="off"
@@ -36,6 +37,7 @@
         <label class="btn btn-outline-secondary" for="diffChartDoubles">Doubles</label>
       </div>
     </div>
+    {% endif %}
     <div class="row justify-content-center">
       <div class="difficulty-chart-container">
         <canvas id="difficultyChart"></canvas>
@@ -44,7 +46,7 @@
   </div>
 </div>
 
-<div class="table-responsive">
+<div class="table-responsive pb-4">
   <table class="table align-middle text-center rounded overflow-hidden bg-body bg-opacity-25" data-toggle="table"
     data-classes="table" data-custom-sort="customSort">
     <thead>
@@ -202,22 +204,11 @@
         })),
     }
   }
-
-
-  function getDifficultyChartData(idx) {
-    return {
-      labels: difficultyData[idx].labels,
-      datasets: difficultyData[idx].datasets.map(
-        (dataset) => ({
-          ...dataset,
-          backgroundColor: diffColors[dataset.diff_num],
-        })),
-    }
-  }
+  const defaultIdx = chartData[1] ? 1 : 2;
 
   const chart = new Chart(ctx, {
     type: 'bar',
-    data: chartData[1],
+    data: chartData[defaultIdx],
     options: {
       maintainAspectRatio: false,
       scales: {
@@ -254,16 +245,18 @@
     chart.options.scales.y.grid.color = b;
     chart.update();
   });
-  document.getElementById('diffChartSelect').addEventListener(
-    'click',
-    (e) => {
-      if (e.target.getAttribute('name') !== 'diffchartstepstype')
-        return;
-      const stepsTypeIdx = +e.target.value;
-      chart.data = chartData[stepsTypeIdx];
-      chart.update();
-    }
-  )
+  const diffChartSelect = document.getElementById('diffChartSelect')
+  if (diffChartSelect)
+    diffChartSelect.addEventListener(
+      'click',
+      (e) => {
+        if (e.target.getAttribute('name') !== 'diffchartstepstype')
+          return;
+        const stepsTypeIdx = +e.target.value;
+        chart.data = chartData[stepsTypeIdx];
+        chart.update();
+      }
+    );
 
 </script>
 {% endblock %}
