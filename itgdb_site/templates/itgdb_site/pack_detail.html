@@ -4,168 +4,151 @@
 {% block title %}{{ pack.name }}{% endblock %}
 
 {% block body_extra %}
-    {% include 'itgdb_site/components/blurred_bg.html' with bg_url=pack.banner.image.url %}
+{% include 'itgdb_site/components/blurred_bg.html' with bg_url=pack.banner.image.url %}
 {% endblock %}
 
 {% block content %}
 <h1 class="text-center mb-4">{{ pack.name }}</h1>
 
 <div class="row p-2 g-4">
-    <div class="col-12 col-md-6">
-        <div class="row g-4">
-            <div class="col-12 col-sm-6 col-md-12">
-                <img class="w-100 border shadow" src="{{ pack.banner.image.url }}" />
-            </div>
-            <div class="col-12 col-sm-6 col-md-12">
-                <p>
-                    <span class="fw-bold">Release date:</span> {{ pack.release_date | date }}<br />
-                    {{ songs.count }} songs, {{ chart_count }} charts
-                </p>
-            </div>
-        </div>
+  <div class="col-12 col-md-6">
+    <div class="row g-4">
+      <div class="col-12 col-sm-6 col-md-12">
+        <img class="w-100 border shadow" src="{{ pack.banner.image.url }}" />
+      </div>
+      <div class="col-12 col-sm-6 col-md-12">
+        <p>
+          <span class="fw-bold">Release date:</span> {{ pack.release_date | date }}<br />
+          {{ songs.count }} songs, {{ chart_count }} charts
+        </p>
+      </div>
     </div>
-    <div class="col-12 col-md-6">
-        <h4 class="mb-3">Difficulty distribution</h4>
-        <div class="row justify-content-center mb-3">
-            <div class="col-5 btn-group" id="diffChartSelect" role="group" aria-label="Choose steps type for graph">
-                <input
-                    type="radio"
-                    class="btn-check"
-                    name="diffchartstepstype"
-                    id="diffChartSingles"
-                    autocomplete="off"
-                    value="1"
-                    checked
-                />
-                <label class="btn btn-outline-secondary" for="diffChartSingles">Singles</label>
-                <input
-                    type="radio"
-                    class="btn-check"
-                    name="diffchartstepstype"
-                    id="diffChartDoubles"
-                    autocomplete="off"
-                    value="2"
-                />
-                <label class="btn btn-outline-secondary" for="diffChartDoubles">Doubles</label>
-            </div>
-        </div>
-        <div class="row justify-content-center">
-            <div class="difficulty-chart-container">
-                <canvas id="difficultyChart"></canvas>
-            </div>
-        </div>
+  </div>
+  <div class="col-12 col-md-6">
+    <h4 class="mb-3">Difficulty distribution</h4>
+    <div class="row justify-content-center mb-3">
+      <div class="col-5 btn-group" id="diffChartSelect" role="group" aria-label="Choose steps type for graph">
+        <input type="radio" class="btn-check" name="diffchartstepstype" id="diffChartSingles" autocomplete="off"
+          value="1" checked />
+        <label class="btn btn-outline-secondary" for="diffChartSingles">Singles</label>
+        <input type="radio" class="btn-check" name="diffchartstepstype" id="diffChartDoubles" autocomplete="off"
+          value="2" />
+        <label class="btn btn-outline-secondary" for="diffChartDoubles">Doubles</label>
+      </div>
     </div>
+    <div class="row justify-content-center">
+      <div class="difficulty-chart-container">
+        <canvas id="difficultyChart"></canvas>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="table-responsive">
-<table class="table align-middle text-center rounded overflow-hidden bg-body bg-opacity-25" data-toggle="table" data-classes="table" data-custom-sort="customSort">
+  <table class="table align-middle text-center rounded overflow-hidden bg-body bg-opacity-25" data-toggle="table"
+    data-classes="table" data-custom-sort="customSort">
     <thead>
-        <tr>
-            <th scope="col" rowspan="2" class="song-bn-col"></th>
-            <th data-field="title" data-sortable="true" scope="col" rowspan="2" class="text-start song-name-col">Song</th>
-            <th data-field="len" data-sortable="true" scope="col" rowspan="2">Length</th>
-            <th data-field="bpm" data-sortable="true" scope="col" rowspan="2">BPM</th>
-            <th scope="col" colspan="6">Singles</th>
-            <th scope="col" colspan="{% if show_double_nov %}6{% else %}5{% endif %}">Doubles</th>
-        </tr>
-        <tr>
-            <th data-field="SN" data-sortable="true" scope="col" class="song-diff">N</th>
-            <th data-field="SE" data-sortable="true" scope="col" class="song-diff">E</th>
-            <th data-field="SM" data-sortable="true" scope="col" class="song-diff">M</th>
-            <th data-field="SH" data-sortable="true" scope="col" class="song-diff">H</th>
-            <th data-field="SX" data-sortable="true" scope="col" class="song-diff">X</th>
-            <th data-field="SEd" data-sortable="true" scope="col" class="song-diff">Ed</th>
-            {% if show_double_nov %}
-            <th data-field="DN" data-sortable="true" scope="col" class="song-diff">N</th>
-            {% endif %}
-            <th data-field="DE" data-sortable="true" scope="col" class="song-diff">E</th>
-            <th data-field="DM" data-sortable="true" scope="col" class="song-diff">M</th>
-            <th data-field="DH" data-sortable="true" scope="col" class="song-diff">H</th>
-            <th data-field="DX" data-sortable="true" scope="col" class="song-diff">X</th>
-            <th data-field="DEd" data-sortable="true" scope="col" class="song-diff">Ed</th>
-        </tr>
+      <tr>
+        <th scope="col" rowspan="2" class="song-bn-col"></th>
+        <th data-field="title" data-sortable="true" scope="col" rowspan="2" class="text-start song-name-col">Song</th>
+        <th data-field="len" data-sortable="true" scope="col" rowspan="2">Length</th>
+        <th data-field="bpm" data-sortable="true" scope="col" rowspan="2">BPM</th>
+        <th scope="col" colspan="6">Singles</th>
+        <th scope="col" colspan="{% if show_double_nov %}6{% else %}5{% endif %}">Doubles</th>
+      </tr>
+      <tr>
+        <th data-field="SN" data-sortable="true" scope="col" class="song-diff">N</th>
+        <th data-field="SE" data-sortable="true" scope="col" class="song-diff">E</th>
+        <th data-field="SM" data-sortable="true" scope="col" class="song-diff">M</th>
+        <th data-field="SH" data-sortable="true" scope="col" class="song-diff">H</th>
+        <th data-field="SX" data-sortable="true" scope="col" class="song-diff">X</th>
+        <th data-field="SEd" data-sortable="true" scope="col" class="song-diff">Ed</th>
+        {% if show_double_nov %}
+        <th data-field="DN" data-sortable="true" scope="col" class="song-diff">N</th>
+        {% endif %}
+        <th data-field="DE" data-sortable="true" scope="col" class="song-diff">E</th>
+        <th data-field="DM" data-sortable="true" scope="col" class="song-diff">M</th>
+        <th data-field="DH" data-sortable="true" scope="col" class="song-diff">H</th>
+        <th data-field="DX" data-sortable="true" scope="col" class="song-diff">X</th>
+        <th data-field="DEd" data-sortable="true" scope="col" class="song-diff">Ed</th>
+      </tr>
     </thead>
     <tbody>
     {% for song in songs %}
-        <tr>
-            <td class="song-bn-cell">
-                <img src="{{ song.banner.image.url }}" />
-            </td>
-            <td class="lh-sm text-start">
-                <span data-sort-key="{{ forloop.counter }}">
-                    <a href="/">
-                        {{ song.title }}
-                        <span class="song-subtitle">{{ song.subtitle }}</span>
-                    </a><br />
-                    <span class="song-artist text-muted">{{ song.artist }}</span>
-                </span>
-            </td>
-            <td>
-                <span data-sort-key="{{ song.length }}">{{ song.length|duration }}</span>
-            </td>
-            <td>
-                <span data-sort-key="{{ song.max_display_bpm }}">
-                {% if not song.min_display_bpm or not song.max_display_bpm %}
-                    ?
-                {% elif song.min_display_bpm == song.max_display_bpm %}
-                    {{ song.min_display_bpm|floatformat:0 }}
-                {% else %}
-                    {{ song.min_display_bpm|floatformat:0 }}-{{ song.max_display_bpm|floatformat:0 }}
-                {% endif %}
-                </span>
-            </td>
-            {% with charts=song.get_charts_by_difficulty %}
-                {% for chart_set in charts %}
-                {% for chart in chart_set %}
-                    {% if forloop.parentloop.counter != 2 or forloop.counter0 != 1 or show_double_nov %}
-                    {% if chart %}
-                        {% if forloop.counter0 == 5 %}
-                            {% if chart.1 %}
-                                <td class="song-meter diff-5">
-                                    <div
-                                        class="has-tooltip"
-                                        data-bs-title="(This song has multiple Edit charts.)"
-                                    >
-                                        +
-                                    </div>
-                                </td>
-                            {% else %}
-                                <td
-                                    class="song-meter diff-5"
-                                >
-                                    <div
-                                        class="has-tooltip"
-                                        data-bs-html="true"
-                                        data-bs-title="{{ chart.0|chart_tooltip }}"
-                                        data-sort-key="{{ chart.0.meter }}"
-                                    >
-                                        {{ chart.0.meter }}
-                                    </div>
-                                </td>
-                            {% endif %}
-                        {% else %}
-                            <td class="song-meter diff-{{ forloop.counter0 }}">
-                                <div
-                                    class="has-tooltip"
-                                    data-bs-html="true"
-                                    data-bs-title="{{ chart|chart_tooltip }}"
-                                    data-sort-key="{{ chart.meter }}"
-                                >
-                                    {{ chart.meter }}
-                                </div>
-                            </td>
-                        {% endif %}
+      <tr>
+        <td class="song-bn-cell">
+          <img src="{{ song.banner.image.url }}" />
+        </td>
+        <td class="lh-sm text-start">
+          <span data-sort-key="{{ forloop.counter }}">
+            <a href="/">
+              {{ song.title }}
+              <span class="song-subtitle">{{ song.subtitle }}</span>
+            </a><br />
+            <span class="song-artist text-muted">{{ song.artist }}</span>
+          </span>
+        </td>
+        <td>
+          <span data-sort-key="{{ song.length }}">{{ song.length|duration }}</span>
+        </td>
+        <td>
+          <span data-sort-key="{{ song.max_display_bpm }}">
+          {% if not song.min_display_bpm or not song.max_display_bpm %}
+            ?
+          {% elif song.min_display_bpm == song.max_display_bpm %}
+            {{ song.min_display_bpm|floatformat:0 }}
+          {% else %}
+            {{ song.min_display_bpm|floatformat:0 }}-{{ song.max_display_bpm|floatformat:0 }}
+          {% endif %}
+          </span>
+        </td>
+        {% with charts=song.get_charts_by_difficulty %}
+          {% for chart_set in charts %}
+            {% for chart in chart_set %}
+              {% if forloop.parentloop.counter != 2 or forloop.counter0 != 1 or show_double_nov %}
+                {% if chart %}
+                  {% if forloop.counter0 == 5 %}
+                    {% if chart.1 %}
+                      <td class="song-meter diff-5">
+                        <div class="has-tooltip" data-bs-title="(This song has multiple Edit charts.)">
+                          +
+                        </div>
+                      </td>
                     {% else %}
-                        <td class="song-meter"></td>
+                      <td class="song-meter diff-5">
+                        <div
+                          class="has-tooltip"
+                          data-bs-html="true"
+                          data-bs-title="{{ chart.0|chart_tooltip }}"
+                          data-sort-key="{{ chart.0.meter }}"
+                        >
+                          {{ chart.0.meter }}
+                        </div>
+                      </td>
                     {% endif %}
-                    {% endif %}
-                {% endfor %}
-                {% endfor %}
-            {% endwith %}
-        </tr>
+                  {% else %}
+                    <td class="song-meter diff-{{ forloop.counter0 }}">
+                      <div
+                        class="has-tooltip"
+                        data-bs-html="true"
+                        data-bs-title="{{ chart|chart_tooltip }}"
+                        data-sort-key="{{ chart.meter }}"
+                      >
+                        {{ chart.meter }}
+                      </div>
+                    </td>
+                  {% endif %}
+                {% else %}
+                <td class="song-meter"></td>
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+        {% endwith %}
+      </tr>
     {% endfor %}
     </tbody>
-</table>
+  </table>
 </div>
 {% endblock %}
 
@@ -214,8 +197,8 @@
       labels: data.labels,
       datasets: data.datasets.map(
         (dataset) => ({
-            ...dataset,
-            backgroundColor: diffColors[dataset.diff_num],
+          ...dataset,
+          backgroundColor: diffColors[dataset.diff_num],
         })),
     }
   }
@@ -226,8 +209,8 @@
       labels: difficultyData[idx].labels,
       datasets: difficultyData[idx].datasets.map(
         (dataset) => ({
-            ...dataset,
-            backgroundColor: diffColors[dataset.diff_num],
+          ...dataset,
+          backgroundColor: diffColors[dataset.diff_num],
         })),
     }
   }
@@ -284,4 +267,3 @@
 
 </script>
 {% endblock %}
-
