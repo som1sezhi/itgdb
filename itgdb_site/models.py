@@ -145,3 +145,18 @@ class Chart(models.Model):
             Chart.STEPS_TYPE_CHOICES[self.steps_type],
             Chart.DIFFICULTY_CHOICES[self.difficulty]
         )
+    
+    def get_chart_info(self):
+        lines = [
+            ('credit', self.credit),
+            ('description', self.description),
+            ('chartname', self.chart_name),
+        ]
+        lines_to_fields = {}
+        for k, line in lines:
+            if line:
+                if line in lines_to_fields:
+                    lines_to_fields[line] += (k,)
+                else:
+                    lines_to_fields[line] = (k,)
+        return {v: k for k, v in lines_to_fields.items()}

@@ -103,3 +103,15 @@ class PackDetailView(generic.DetailView):
         ctx['difficulty_data'] = difficulty_data
 
         return ctx
+
+
+class SongDetailView(generic.DetailView):
+    model = Song
+    template_name = 'itgdb_site/song_detail.html'
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        ctx = super().get_context_data(**kwargs)
+        charts = self.object.chart_set.order_by('steps_type', 'difficulty')
+        ctx['charts'] = charts
+
+        return ctx

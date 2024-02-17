@@ -1,0 +1,131 @@
+{% extends 'itgdb_site/base.html' %}
+{% load itgdb_tags %}
+
+{% block title %}{{ song.title }} {{ song.subtitle }}{% endblock %}
+
+{% block body_extra %}
+{% firstof song.bg.image.url song.banner.image.url as bg_url %}
+{% include 'itgdb_site/components/blurred_bg.html' %}
+{% endblock %}
+
+{% block content %}
+<h1 class="text-center">
+  {{ song.title }}
+  <span class="song-subtitle">{{ song.subtitle }}</span>
+</h1>
+<h4 class="text-center mb-4 text-muted">{{ song.artist }}</h4>
+
+<div class="row p-2 g-4 mb-4">
+  <div class="col-12 col-sm-6">
+    <img class="w-100 border shadow" src="{{ song.banner.image.url }}" />
+  </div>
+  <div class="col-12 col-sm-6">
+    <table class="table table-sm info-table">
+      <tr>
+        <th scope="row">Pack</th>
+        <td>
+          <a href="{% url 'itgdb_site:pack_detail' song.pack.id %}">
+            {{ song.pack.name }}
+          </a>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Release date</th>
+        <td>{{ song.release_date|date }}</td>
+      </tr>
+      {% if song.title_translit or song.subtitle_translit %}
+      <tr>
+        <th scope="row">Transliterated title</th>
+        <td>
+          {% firstof song.title_translit song.title %}
+          <span class="song-subtitle">
+            {% firstof song.subtitle_translit song.subtitle %}
+          </span>
+        </td>
+      </tr>
+      {% endif %}
+      {% if song.artist_translit %}
+      <tr>
+        <th scope="row">Transliterated artist</th>
+        <td>{{ song.artist_translit }}</td>
+      </tr>
+      {% endif %}
+      <tr>
+        <th scope="row">Length</th>
+        <td>{{ song.length|duration }}</td>
+      </tr>
+      <tr>
+        <th scope="row">BPM</th>
+        <td>{{ song|display_bpm }}</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<ul class="nav nav-pills" id="chartTabs" role="tablist">
+{% for chart in charts %}
+  <li class="nav-item me-1" role="presentation">
+    <button
+      data-hash="#chart-{{ chart.id }}"
+      class="nav-link diff-{{ chart.difficulty }}"
+      id="chart-{{ chart.id }}-tab"
+      data-bs-toggle="tab"
+      data-bs-target="#chart-{{ chart.id }}-panel"
+      type="button" role="tab"
+      aria-controls="home" aria-selected="true"
+    >
+      {{ chart|chart_diff_short }}
+      <span class="fw-bold">{{ chart.meter }}</span>
+    </button>
+  </li>
+{% endfor %}
+</ul>
+<div class="tab-content" id="chartTabsContent">
+{% for chart in charts %}
+  <div 
+    class="p-3 tab-pane fade row"
+    id="chart-{{ chart.id }}-panel"
+    role="tabpanel" aria-labelledby="home-tab">
+    <div class="col-12 col-sm-6">
+      <table class="table table-sm info-table">
+      {% for keys, line in chart.get_chart_info.items %}
+        <tr>
+          <th scope="row">{{ keys|join:'/'|capfirst }}</th>
+          <td>{{ line }}</td>
+        </tr>
+      {% endfor %}
+      </table>
+    </div>
+  </div>
+{% endfor %}
+</div>
+{% endblock %}
+
+{% block script_extra %}
+<script type="text/javascript">
+  // https://github.com/twbs/bootstrap/issues/25220#issuecomment-535915733
+  $(document).ready(() => {
+    const url = window.location.href;
+
+    function switchTab() {
+      const anchor = window.location.hash;
+      if (anchor)
+        $(`#chartTabs button[data-hash="${anchor}"]`).tab('show');
+      else
+        $(`#chartTabs li:first-child button`).tab('show');
+    }
+
+    // switch to correct tab according to url
+    switchTab();
+    $(window).on('hashchange', switchTab);
+
+    // set url on tab click
+    $('button[role="tab"]').on('click', function() {
+      const hash = $(this).attr('data-hash');
+      const newUrl = url.split('#')[0] + hash;
+      history.replaceState(null, null, newUrl);
+    });
+  });
+
+</script>
+{% endblock %}

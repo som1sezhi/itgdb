@@ -6,6 +6,12 @@
     --itgdb-diff-3: rgba(212, 64, 64, 0.6);
     --itgdb-diff-4: rgba(67, 147, 213, 0.6);
     --itgdb-diff-5: rgba(168, 168, 168, 0.6);
+    --itgdb-diff-0-bg: rgb(169, 62, 222);
+    --itgdb-diff-1-bg: rgb(78, 176, 63);
+    --itgdb-diff-2-bg: rgb(203, 162, 40);
+    --itgdb-diff-3-bg: rgb(212, 64, 64);
+    --itgdb-diff-4-bg: rgb(67, 147, 213);
+    --itgdb-diff-5-bg: rgb(145, 145, 145);
 }
 
 .bg-image {
@@ -73,15 +79,27 @@ td.song-meter {
     padding: 0;
 }
 
-td.song-meter > div {
+td.song-meter > a {
+    display: block;
     width: 100%;
     padding: calc((var(--itgdb-row-height) - 1em) / 2 - 0.2em) 0;
+    color: inherit;
+    transition: text-shadow 0.2s;
+}
+
+td.song-meter > a:hover {
+    text-shadow: 0px 0px 8px rgb(247, 248, 230);
+    transition: text-shadow 0.2s;
 }
 
 /* overrides bootstrap tooltip */
 .tooltip-inner {
     min-width: 100px;
     max-width: 100%; 
+}
+
+table.info-table tr th {
+    padding-right: 1em;
 }
 
 td.diff-0 {
@@ -106,4 +124,37 @@ td.diff-4 {
 
 td.diff-5 {
     background-color: var(--itgdb-diff-5);
+}
+
+.nav-pills .nav-link.diff-0 {
+    --bs-nav-pills-link-active-bg: var(--itgdb-diff-0-bg);
+    --bs-nav-link-color: var(--itgdb-diff-0-bg);
+    --bs-nav-link-hover-color: var(--itgdb-diff-0-bg);
+}
+
+.nav-pills .nav-link.diff-1 {
+    --bs-nav-pills-link-active-bg: var(--itgdb-diff-1-bg);
+    --bs-nav-link-color: var(--itgdb-diff-1-bg);
+    --bs-nav-link-hover-color: var(--itgdb-diff-1-bg);
+}
+
+.nav-pills .nav-link.diff-2 {
+    --bs-nav-pills-link-active-bg: var(--itgdb-diff-2-bg);
+    --bs-nav-link-color: var(--itgdb-diff-2-bg);
+    --bs-nav-link-hover-color: var(--itgdb-diff-2-bg);
+}
+.nav-pills .nav-link.diff-3 {
+    --bs-nav-pills-link-active-bg: var(--itgdb-diff-3-bg);
+    --bs-nav-link-color: var(--itgdb-diff-3-bg);
+    --bs-nav-link-hover-color: var(--itgdb-diff-3-bg);
+}
+.nav-pills .nav-link.diff-4 {
+    --bs-nav-pills-link-active-bg: var(--itgdb-diff-4-bg);
+    --bs-nav-link-color: var(--itgdb-diff-4-bg);
+    --bs-nav-link-hover-color: var(--itgdb-diff-4-bg);
+}
+.nav-pills .nav-link.diff-5 {
+    --bs-nav-pills-link-active-bg: var(--itgdb-diff-5-bg);
+    --bs-nav-link-color: var(--itgdb-diff-5-bg);
+    --bs-nav-link-hover-color: var(--itgdb-diff-5-bg);
 }

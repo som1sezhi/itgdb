@@ -18,7 +18,7 @@
       </div>
       <div class="col-12 col-sm-6 col-md-12">
         <p>
-          <span class="fw-bold">Release date:</span> {{ pack.release_date | date }}<br />
+          <span class="fw-bold">Release date:</span> {{ pack.release_date|date }}<br />
           {{ songs.count }} songs, {{ chart_count }} charts
         </p>
       </div>
@@ -31,10 +31,10 @@
       <div class="col-5 btn-group" id="diffChartSelect" role="group" aria-label="Choose steps type for graph">
         <input type="radio" class="btn-check" name="diffchartstepstype" id="diffChartSingles" autocomplete="off"
           value="1" checked />
-        <label class="btn btn-outline-secondary" for="diffChartSingles">Singles</label>
+        <label class="btn btn-outline-secondary btn-sm" for="diffChartSingles">Singles</label>
         <input type="radio" class="btn-check" name="diffchartstepstype" id="diffChartDoubles" autocomplete="off"
           value="2" />
-        <label class="btn btn-outline-secondary" for="diffChartDoubles">Doubles</label>
+        <label class="btn btn-outline-secondary btn-sm" for="diffChartDoubles">Doubles</label>
       </div>
     </div>
     {% endif %}
@@ -83,7 +83,7 @@
         </td>
         <td class="lh-sm text-start">
           <span data-sort-key="{{ forloop.counter }}">
-            <a href="/">
+            <a href="{% url 'itgdb_site:song_detail' song.id %}">
               {{ song.title }}
               <span class="song-subtitle">{{ song.subtitle }}</span>
             </a><br />
@@ -95,13 +95,7 @@
         </td>
         <td>
           <span data-sort-key="{{ song.max_display_bpm }}">
-          {% if not song.min_display_bpm or not song.max_display_bpm %}
-            ?
-          {% elif song.min_display_bpm == song.max_display_bpm %}
-            {{ song.min_display_bpm|floatformat:0 }}
-          {% else %}
-            {{ song.min_display_bpm|floatformat:0 }}-{{ song.max_display_bpm|floatformat:0 }}
-          {% endif %}
+            {{ song|display_bpm }}
           </span>
         </td>
         {% with charts=song.get_charts_by_difficulty %}
@@ -112,32 +106,39 @@
                   {% if forloop.counter0 == 5 %}
                     {% if chart.1 %}
                       <td class="song-meter diff-5">
-                        <div class="has-tooltip" data-bs-title="(This song has multiple Edit charts.)">
-                          +
-                        </div>
+                        <a
+                          href="{% url 'itgdb_site:song_detail' song.id %}#chart-{{ chart.0.id }}"
+                          class="has-tooltip"
+                          data-bs-html="true"
+                          data-bs-title="(This song has multiple Edit charts.)"
+                        >
+                            +
+                        </a>
                       </td>
                     {% else %}
                       <td class="song-meter diff-5">
-                        <div
-                          class="has-tooltip"
-                          data-bs-html="true"
-                          data-bs-title="{{ chart.0|chart_tooltip }}"
-                          data-sort-key="{{ chart.0.meter }}"
-                        >
+                        <a
+                        href="{% url 'itgdb_site:song_detail' song.id %}#chart-{{ chart.0.id }}"
+                        class="has-tooltip"
+                        data-bs-html="true"
+                        data-bs-title="{{ chart.0|chart_tooltip }}"
+                        data-sort-key="{{ chart.0.meter }}"
+                      >
                           {{ chart.0.meter }}
-                        </div>
+                      </a>
                       </td>
                     {% endif %}
                   {% else %}
                     <td class="song-meter diff-{{ forloop.counter0 }}">
-                      <div
+                      <a
+                        href="{% url 'itgdb_site:song_detail' song.id %}#chart-{{ chart.id }}"
                         class="has-tooltip"
                         data-bs-html="true"
                         data-bs-title="{{ chart|chart_tooltip }}"
                         data-sort-key="{{ chart.meter }}"
                       >
-                        {{ chart.meter }}
-                      </div>
+                          {{ chart.meter }}
+                      </a>
                     </td>
                   {% endif %}
                 {% else %}
