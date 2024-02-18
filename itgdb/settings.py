@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -20,12 +21,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-8@brlzyok&v999*u_7_+cz)677s(x*1f+%wpwk1@f)mj+s77ek'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'secret-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', '1') == '1'
 
-ALLOWED_HOSTS = []
+if not DEBUG:
+    ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(' ')
+# if DEBUG, use default ALLOWED_HOSTS (empty list)
+# to allow localhost during dev
 
 
 # Application definition
@@ -85,11 +89,11 @@ WSGI_APPLICATION = 'itgdb.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'itgdb',
-        'USER': 'postgres',
-        'PASSWORD': 'testpass',
-        'HOST': '127.0.0.1',
-        'PORT': '5432',
+        'NAME': os.environ.get('DB_NAME', 'itgdb'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'testpass'),
+        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
@@ -145,7 +149,7 @@ MEDIA_ROOT = BASE_DIR / 'uploads/'
 
 
 # Celery settings
-CELERY_BROKER_URL = 'redis://localhost:6380'
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER', 'redis://localhost:6380')
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
 CELERY_RESULT_EXTENDED = True
@@ -153,10 +157,10 @@ CELERY_RESULT_EXTENDED = True
 
 # Storages
 base_bucket_storage_options = {
-    'bucket_name': 'testwebsite',
-    'endpoint_url': 'http://s3.localhost.localstack.cloud:4566',
-    'access_key': 'fake',
-    'secret_key': 'fake',
+    'bucket_name': os.environ.get('AWS_STORAGE_BUCKET_NAME', 'itgdbtest'),
+    'endpoint_url': os.environ.get('AWS_S3_ENDPOINT_URL', 'http://s3.localhost.localstack.cloud:4566'),
+    'access_key': os.environ.get('AWS_ACCESS_KEY_ID', 'fake'),
+    'secret_key': os.environ.get('AWS_SECRET_ACCESS_KEY', 'fake'),
 }
 STORAGES = {
     'default': {

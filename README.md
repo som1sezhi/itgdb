@@ -9,3 +9,13 @@ Start up Celery worker:
 ```shell
 python -m celery -A itgdb worker -l info
 ```
+
+Start Localstack:
+```shell
+localstack start -d
+```
+
+Create bucket:
+```shell
+awslocal s3api create-bucket --bucket itgdbtest
+```

@@ -1,5 +1,4 @@
 __pycache__
+.git
 .venv/
-db.sqlite3
-.env
 uploads/
