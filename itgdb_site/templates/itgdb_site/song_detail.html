@@ -1,8 +1,13 @@
 {% extends 'itgdb_site/base.html' %}
+{% load static %}
 {% load itgdb_tags %}
 {% load mathfilters %}
 
 {% block title %}{{ song.title }} {{ song.subtitle }}{% endblock %}
+
+{% block head_extra %}
+<link href="{% static 'itgdb_site/song_detail.css' %}" rel="stylesheet" />
+{% endblock %}
 
 {% block body_extra %}
 {% firstof song.bg.image.url song.banner.image.url as bg_url %}
@@ -89,7 +94,7 @@
     class="p-3 tab-pane row"
     id="chart-{{ chart.id }}-panel"
     role="tabpanel" aria-labelledby="home-tab">
-    <div class="row">
+    <div class="row mb-3">
       <div class="col-12 col-sm-6">
         <div class="row mb-1 ps-3 figure-caption">
           Peak density: {{ chart_density_data.peak_nps|floatformat }} NPS
@@ -109,6 +114,52 @@
             <td>{{ line }}</td>
           </tr>
         {% endfor %}
+          <tr>
+            <th scope="row">Hash</th>
+            <td>{{ chart.chart_hash|slice:16 }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-12 col-sm-6">
+        <table class="table table-sm info-table count-table mb-0">
+          <tr>
+            <th scope="row">Steps</th>
+            <td>{{ chart.steps_count }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Max combo</th>
+            <td>{{ chart.combo_count }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Jumps</th>
+            <td>{{ chart.jumps_count }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Hands</th>
+            <td>{{ chart.hands_count }}</td>
+          </tr>
+        </table>
+      </div>
+      <div class="col-12 col-sm-6">
+        <table class="table table-sm info-table count-table">
+          <tr>
+            <th scope="row">Mines</th>
+            <td>{{ chart.mines_count }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Holds</th>
+            <td>{{ chart.holds_count }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Rolls</th>
+            <td>{{ chart.rolls_count }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Lifts</th>
+            <td>{{ chart.lifts_count }}</td>
+          </tr>
         </table>
       </div>
     </div>
@@ -156,6 +207,8 @@
     const col = docStyle.getPropertyValue(`--itgdb-diff-${i}`);
     diffColors.push(col);
   }
+  // const peaks = densityData.map((d) => d.peak_nps);
+  // const yMax = peaks.reduce((a, b) => Math.max(a, b), 0);
   for (const chartData of densityData) {
     const ctx = document.getElementById(`densityChart${chartData.id}`);
     const data = {

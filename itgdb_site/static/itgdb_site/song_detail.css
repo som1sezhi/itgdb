@@ -1,0 +1,43 @@
+.density-chart-container {
+    height: 7rem;
+}
+
+table.count-table td {
+    text-align: right;
+}
+
+.nav-pills .nav-link.diff-0 {
+    --bs-nav-pills-link-active-bg: var(--itgdb-diff-0-bg);
+    --bs-nav-link-color: var(--itgdb-diff-0-bg);
+    --bs-nav-link-hover-color: var(--itgdb-diff-0-bg);
+}
+
+.nav-pills .nav-link.diff-1 {
+    --bs-nav-pills-link-active-bg: var(--itgdb-diff-1-bg);
+    --bs-nav-link-color: var(--itgdb-diff-1-bg);
+    --bs-nav-link-hover-color: var(--itgdb-diff-1-bg);
+}
+
+.nav-pills .nav-link.diff-2 {
+    --bs-nav-pills-link-active-bg: var(--itgdb-diff-2-bg);
+    --bs-nav-link-color: var(--itgdb-diff-2-bg);
+    --bs-nav-link-hover-color: var(--itgdb-diff-2-bg);
+}
+
+.nav-pills .nav-link.diff-3 {
+    --bs-nav-pills-link-active-bg: var(--itgdb-diff-3-bg);
+    --bs-nav-link-color: var(--itgdb-diff-3-bg);
+    --bs-nav-link-hover-color: var(--itgdb-diff-3-bg);
+}
+
+.nav-pills .nav-link.diff-4 {
+    --bs-nav-pills-link-active-bg: var(--itgdb-diff-4-bg);
+    --bs-nav-link-color: var(--itgdb-diff-4-bg);
+    --bs-nav-link-hover-color: var(--itgdb-diff-4-bg);
+}
+
+.nav-pills .nav-link.diff-5 {
+    --bs-nav-pills-link-active-bg: var(--itgdb-diff-5-bg);
+    --bs-nav-link-color: var(--itgdb-diff-5-bg);
+    --bs-nav-link-hover-color: var(--itgdb-diff-5-bg);
+}
