@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'debug_toolbar',
     'itgdb_site',
     'storages',
+    'mathfilters',
     'django_cleanup.apps.CleanupConfig', # keep last
 ]
 

@@ -117,6 +117,7 @@ class Chart(models.Model):
     description = models.CharField(max_length=255, null=True, blank=True)
     chart_name = models.CharField(max_length=255, null=True, blank=True)
     chart_hash = models.CharField(max_length=40)
+    density_graph = models.JSONField()
     objects_count = models.PositiveIntegerField()
     steps_count = models.PositiveIntegerField()
     combo_count = models.PositiveIntegerField()

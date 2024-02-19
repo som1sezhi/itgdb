@@ -14,7 +14,7 @@ from celery import shared_task
 import cv2
 
 from .models import Pack, Song, Chart, ImageFile
-from .utils.charts import get_hash, get_counts
+from .utils.charts import get_hash, get_counts, get_density_graph
 
 
 def get_pack_banner_path(pack_path, simfile_pack):
@@ -153,6 +153,7 @@ def process_pack_upload(pack_data, filename):
                         description = chart.description,
                         chart_name = chart.get('CHARTNAME'),
                         chart_hash = chart_hash,
+                        density_graph = get_density_graph(sim, chart),
                         **counts
                     )
     finally:

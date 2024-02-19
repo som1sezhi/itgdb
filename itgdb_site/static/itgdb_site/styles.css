@@ -102,6 +102,10 @@ table.info-table tr th {
     padding-right: 1em;
 }
 
+.density-chart-container {
+    height: 7rem;
+}
+
 td.diff-0 {
     background-color: var(--itgdb-diff-0);
 }

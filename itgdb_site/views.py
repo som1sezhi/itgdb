@@ -112,6 +112,15 @@ class SongDetailView(generic.DetailView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         ctx = super().get_context_data(**kwargs)
         charts = self.object.chart_set.order_by('steps_type', 'difficulty')
-        ctx['charts'] = charts
+        ctx['density_data'] = [
+            {
+                'id': chart.id,
+                'diff_num': chart.difficulty,
+                'points': chart.density_graph,
+                'peak_nps': max(p[1] for p in chart.density_graph)
+            }
+            for chart in charts
+        ]
+        ctx['charts'] = list(zip(charts, ctx['density_data']))
 
         return ctx

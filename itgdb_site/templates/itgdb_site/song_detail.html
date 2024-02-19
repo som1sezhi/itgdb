@@ -1,5 +1,6 @@
 {% extends 'itgdb_site/base.html' %}
 {% load itgdb_tags %}
+{% load mathfilters %}
 
 {% block title %}{{ song.title }} {{ song.subtitle }}{% endblock %}
 
@@ -17,7 +18,9 @@
 
 <div class="row p-2 g-4 mb-4">
   <div class="col-12 col-sm-6">
+    {% if song.banner %}
     <img class="w-100 border shadow" src="{{ song.banner.image.url }}" />
+    {% endif %}
   </div>
   <div class="col-12 col-sm-6">
     <table class="table table-sm info-table">
@@ -63,7 +66,7 @@
 </div>
 
 <ul class="nav nav-pills" id="chartTabs" role="tablist">
-{% for chart in charts %}
+{% for chart, _ in charts %}
   <li class="nav-item me-1" role="presentation">
     <button
       data-hash="#chart-{{ chart.id }}"
@@ -81,20 +84,33 @@
 {% endfor %}
 </ul>
 <div class="tab-content" id="chartTabsContent">
-{% for chart in charts %}
+{% for chart, chart_density_data in charts %}
   <div 
-    class="p-3 tab-pane fade row"
+    class="p-3 tab-pane row"
     id="chart-{{ chart.id }}-panel"
     role="tabpanel" aria-labelledby="home-tab">
-    <div class="col-12 col-sm-6">
-      <table class="table table-sm info-table">
-      {% for keys, line in chart.get_chart_info.items %}
-        <tr>
-          <th scope="row">{{ keys|join:'/'|capfirst }}</th>
-          <td>{{ line }}</td>
-        </tr>
-      {% endfor %}
-      </table>
+    <div class="row">
+      <div class="col-12 col-sm-6">
+        <div class="row mb-1 ps-3 figure-caption">
+          Peak density: {{ chart_density_data.peak_nps|floatformat }} NPS
+          ({{ chart_density_data.peak_nps|mul:15|floatformat:"0" }} eBPM)
+        </div>
+        <div class="row justify-content-center">
+          <div class="density-chart-container">
+            <canvas id="densityChart{{ chart.id }}"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-sm-6">
+        <table class="table table-sm info-table">
+        {% for keys, line in chart.get_chart_info.items %}
+          <tr>
+            <th scope="row">{{ keys|join:'/'|capfirst }}</th>
+            <td>{{ line }}</td>
+          </tr>
+        {% endfor %}
+        </table>
+      </div>
     </div>
   </div>
 {% endfor %}
@@ -102,6 +118,8 @@
 {% endblock %}
 
 {% block script_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+{{ density_data|json_script }}
 <script type="text/javascript">
   // https://github.com/twbs/bootstrap/issues/25220#issuecomment-535915733
   $(document).ready(() => {
@@ -127,5 +145,81 @@
     });
   });
 
+  // density charts
+  let ch;
+  const densityData = JSON.parse(
+    document.currentScript.previousElementSibling.textContent
+  );
+  const diffColors = [];
+  const docStyle = getComputedStyle(document.documentElement);
+  for (let i = 0; i < 6; i++) {
+    const col = docStyle.getPropertyValue(`--itgdb-diff-${i}`);
+    diffColors.push(col);
+  }
+  for (const chartData of densityData) {
+    const ctx = document.getElementById(`densityChart${chartData.id}`);
+    const data = {
+      datasets: [{
+        fill: 'origin',
+        showLine: true,
+        data: chartData.points.map(([x, y]) => ({x, y})),
+        backgroundColor: diffColors[chartData.diff_num]
+      }]
+    };
+
+    const chart = new Chart(ctx, {
+      type: 'scatter',
+      data: data,
+      options: {
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            type: 'linear',
+            position: 'bottom',
+            min: chartData.points[0][0],
+            max: chartData.points[chartData.points.length - 1][0],
+            ticks: {
+              display: false,
+            }
+          },
+          y: {
+            max: chartData.peak_nps,
+            ticks: {
+              display: false,
+            }
+          }
+        },
+        elements: {
+          point: {
+            pointStyle: false,
+          },
+        },
+        animation: {
+          duration: 0,
+        },
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            animation: {
+              duration: 150,
+            }
+          }
+        },
+      }
+    });
+    ch = chart;
+    document.documentElement.addEventListener('themeChanged', (e) => {
+      const c = e.detail === 'light' ? '#444' : '#bbb';
+      const b = e.detail === 'light' ? '#00000010' : '#ffffff10';
+      chart.options.plugins.legend.labels.color = c;
+      chart.options.scales.x.ticks.color = c;
+      chart.options.scales.y.ticks.color = c;
+      chart.options.scales.x.grid.color = b;
+      chart.options.scales.y.grid.color = b;
+      chart.update();
+    });
+  }
 </script>
 {% endblock %}
