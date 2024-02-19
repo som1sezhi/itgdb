@@ -19,6 +19,7 @@ django-cleanup = "*"
 opencv-python-headless = "*"
 django-debug-toolbar = "*"
 django-mathfilters = "*"
+sorl-thumbnail = "*"
 
 [dev-packages]
 localstack = "*"

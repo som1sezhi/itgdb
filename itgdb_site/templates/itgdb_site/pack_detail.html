@@ -1,5 +1,6 @@
 {% extends 'itgdb_site/base.html' %}
 {% load itgdb_tags %}
+{% load thumbnail %}
 
 {% block title %}{{ pack.name }}{% endblock %}
 
@@ -81,7 +82,9 @@
     {% for song in songs %}
       <tr>
         <td class="song-bn-cell">
-          <img src="{{ song.banner.image.url }}" />
+        {% thumbnail song.banner.image "x50" as im %}
+          <img src="{{ im.url }}" />
+        {% endthumbnail %}
         </td>
         <td class="lh-sm text-start">
           <span data-sort-key="{{ forloop.counter }}">

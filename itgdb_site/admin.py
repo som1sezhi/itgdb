@@ -24,8 +24,6 @@ class TestModelAdmin(ExtraButtonsMixin, admin.ModelAdmin):
                 now = datetime.now().strftime('%Y%m%d%H%M%S')
                 path = 'packs/' + now + '_' + file.name
                 filename = default_storage.save(path, file)
-                print(form_data)
-                print(filename)
 
                 # prepare form data so celery can convert it to json
                 data = form.cleaned_data

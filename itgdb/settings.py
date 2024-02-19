@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'itgdb_site',
     'storages',
     'mathfilters',
+    'sorl.thumbnail',
     'django_cleanup.apps.CleanupConfig', # keep last
 ]
 
@@ -150,18 +151,22 @@ MEDIA_ROOT = BASE_DIR / 'uploads/'
 
 
 # Celery settings
-CELERY_BROKER_URL = os.environ.get('CELERY_BROKER', 'redis://localhost:6380')
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER', 'redis://localhost:6379')
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
 CELERY_RESULT_EXTENDED = True
 
 
 # Storages
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'itgdbtest')
+AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', 'http://s3.localhost.localstack.cloud:4566')
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', 'fake')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', 'fake')
 base_bucket_storage_options = {
-    'bucket_name': os.environ.get('AWS_STORAGE_BUCKET_NAME', 'itgdbtest'),
-    'endpoint_url': os.environ.get('AWS_S3_ENDPOINT_URL', 'http://s3.localhost.localstack.cloud:4566'),
-    'access_key': os.environ.get('AWS_ACCESS_KEY_ID', 'fake'),
-    'secret_key': os.environ.get('AWS_SECRET_ACCESS_KEY', 'fake'),
+    'bucket_name': AWS_STORAGE_BUCKET_NAME,
+    'endpoint_url': AWS_S3_ENDPOINT_URL,
+    'access_key': AWS_ACCESS_KEY_ID,
+    'secret_key': AWS_SECRET_ACCESS_KEY,
 }
 STORAGES = {
     'default': {
@@ -187,3 +192,10 @@ STORAGES = {
         }
     },
 }
+
+# sorl-thumbnail settings
+THUMBNAIL_KVSTORE = 'sorl.thumbnail.kvstores.redis_kvstore.KVStore'
+THUMBNAIL_REDIS_URL = os.environ.get(
+    'THUMBNAIL_REDIS_URL', 'redis://localhost:6379'
+)
+THUMBNAIL_STORAGE = 'itgdb_site.storage_backends.ThumbnailStorage'
