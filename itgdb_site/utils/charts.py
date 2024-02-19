@@ -94,8 +94,14 @@ def _get_hittable_arrows(sim: BaseSimfile, chart: BaseChart) -> NoteData:
     # ourselves first
     return NoteData.from_notes(filter(
         lambda note: \
-            engine.hittable(note.beat) and \
-            not _is_in_fake_segment(fake_segs, note.beat),
+            # keep all tails to avoid orphaning hold heads whose tails are in
+            # a fake segment.
+            # any orphaned tails will be dropped later by the counting functions
+            note.note_type == NoteType.TAIL or \
+            (
+                engine.hittable(note.beat) and \
+                not _is_in_fake_segment(fake_segs, note.beat)
+            ),
         notes
     ), notes.columns)
 

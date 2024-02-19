@@ -11,10 +11,13 @@ from simfile.dir import SimfilePack
 from simfile.timing.displaybpm import displaybpm
 import mutagen
 from celery import shared_task
+from celery.utils.log import get_task_logger
 import cv2
 
 from .models import Pack, Song, Chart, ImageFile
 from .utils.charts import get_hash, get_counts, get_density_graph
+
+logger = get_task_logger(__name__)
 
 
 def get_pack_banner_path(pack_path, simfile_pack):
@@ -107,6 +110,8 @@ def process_pack_upload(pack_data, filename):
                 assets = simfile_dir.assets()
                 sim_path = simfile_dir.simfile_path
                 sim_filename = os.path.basename(sim_path)
+
+                logger.info(f'Loading {p.name}/{sim.title}')
 
                 music_path = assets.music
                 audio = mutagen.File(music_path)

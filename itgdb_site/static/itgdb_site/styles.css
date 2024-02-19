@@ -15,7 +15,7 @@
 }
 
 .bg-image {
-    filter: blur(32px) opacity(50%);
+    filter: blur(16px) opacity(50%);
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;

@@ -30,7 +30,7 @@ class TestModelAdmin(ExtraButtonsMixin, admin.ModelAdmin):
                 data['tags'] = [tag.id for tag in data['tags']]
                 del data['file']
                 process_pack_upload.delay(data, filename)
-                return HttpResponseRedirect('/admin/')
+                return HttpResponseRedirect('/admin/itgdb_site/pack/')
         else:
             form = PackUploadForm()
         context['text'] = 'hello'
