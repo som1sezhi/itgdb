@@ -13,6 +13,7 @@ import mutagen
 from celery import shared_task
 from celery.utils.log import get_task_logger
 import cv2
+from sorl.thumbnail import get_thumbnail
 
 from .models import Pack, Song, Chart, ImageFile
 from .utils.charts import get_hash, get_counts, get_density_graph
@@ -39,7 +40,7 @@ def get_pack_banner_path(pack_path, simfile_pack):
     return simfile_pack.banner()
 
 
-def get_image(path, pack, cache):
+def get_image(path, pack, cache, generate_thumbnail=False):
     if not path or not os.path.isfile(path):
         return None
     if path in cache:
@@ -66,6 +67,10 @@ def get_image(path, pack, cache):
                 image = File(f, name=f'{uuid.uuid4()}_{base_filename}')
             )
             img_file.save()
+            if generate_thumbnail:
+                # pregenerate thumbnail
+                # NOTE: geometry string here is for banner thumbnails
+                get_thumbnail(img_file.image, 'x50')
             cache[path] = img_file
             return img_file
     
@@ -102,7 +107,7 @@ def process_pack_upload(pack_data, filename):
             p.save()
             p.tags.add(*pack_data['tags'])
             pack_bn_path = get_pack_banner_path(pack_path, simfile_pack)
-            p.banner = get_image(pack_bn_path, p, image_cache)
+            p.banner = get_image(pack_bn_path, p, image_cache, True)
             p.save()
 
             for simfile_dir in simfile_pack.simfile_dirs():
@@ -139,7 +144,7 @@ def process_pack_upload(pack_data, filename):
                     length = audio.info.length,
                     release_date = p.release_date,
                     simfile = File(f, name=f'{sim_uuid}_{sim_filename}'),
-                    banner = get_image(assets.banner, p, image_cache),
+                    banner = get_image(assets.banner, p, image_cache, True),
                     bg = get_image(assets.background, p, image_cache),
                     cdtitle = get_image(assets.cdtitle, p, image_cache),
                     jacket = get_image(assets.jacket, p, image_cache),
