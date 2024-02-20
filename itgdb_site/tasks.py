@@ -102,7 +102,8 @@ def process_pack_upload(pack_data, filename):
             simfile_pack = SimfilePack(pack_path)
             p = Pack(
                 name = pack_data['name'] or simfile_pack.name,
-                release_date = pack_data['release_date']
+                release_date = pack_data['release_date'],
+                links = pack_data['links']
             )
             p.save()
             p.tags.add(*pack_data['tags'])
@@ -116,7 +117,7 @@ def process_pack_upload(pack_data, filename):
                 sim_path = simfile_dir.simfile_path
                 sim_filename = os.path.basename(sim_path)
 
-                logger.info(f'Loading {p.name}/{sim.title}')
+                logger.info(f'Processing {p.name}/{sim.title}')
 
                 music_path = assets.music
                 audio = mutagen.File(music_path)

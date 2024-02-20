@@ -28,8 +28,9 @@ class Tag(models.Model):
 
 class Pack(models.Model):
     name = models.CharField(max_length=255, blank=True)
-    release_date = models.DateTimeField()
+    release_date = models.DateTimeField(blank=True, null=True)
     tags = models.ManyToManyField(Tag, blank=True)
+    links = models.TextField(blank=True)
     banner = models.ForeignKey(
         ImageFile, on_delete=models.SET_NULL, related_name='banner_packs',
         blank=True, null=True
@@ -53,7 +54,7 @@ class Song(models.Model):
     min_display_bpm = models.FloatField(null=True, blank=True)
     max_display_bpm = models.FloatField(null=True, blank=True)
     length = models.FloatField()
-    release_date = models.DateTimeField()
+    release_date = models.DateTimeField(null=True, blank=True)
     simfile = models.FileField(storage=get_simfiles_storage)
     banner = models.ForeignKey(
         ImageFile, on_delete=models.SET_NULL, related_name='banner_songs',

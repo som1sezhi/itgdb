@@ -9,4 +9,4 @@ class PackUploadForm(forms.ModelForm):
 
     class Meta:
         model = Pack
-        fields = ['name', 'release_date', 'tags']
+        fields = ['name', 'release_date', 'tags', 'links']

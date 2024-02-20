@@ -13,7 +13,7 @@
 
 <div class="row p-2 g-4">
   <div class="col-12 col-md-6">
-    <div class="row g-4">
+    <div class="row g-3">
       <div class="col-12 col-sm-6 col-md-12">
         {% if pack.banner %}
         <img class="w-100 border shadow" src="{{ pack.banner.image.url }}" />
@@ -21,8 +21,25 @@
       </div>
       <div class="col-12 col-sm-6 col-md-12">
         <p>
+        {% if pack.release_date %}
           <span class="fw-bold">Release date:</span> {{ pack.release_date|date }}<br />
-          {{ songs.count }} songs, {{ chart_count }} charts
+        {% endif %}
+          {{ songs.count }} songs, {{ chart_count }} charts<br />
+        </p>
+        <p class="mb-1">
+        {% for link_label, link_url in links %}
+          <a href="{{ link_url }}" target="_blank" rel="noopener noreferrer">
+              {{ link_label }}
+          </a>
+          {% if not forloop.last %}
+            &#x2022;
+          {% endif %}
+        {% endfor %}
+        </p>
+        <p>
+        {% for tag in pack.tags.all %}
+          <span class="badge text-bg-secondary">{{ tag.name }}</span>
+        {% endfor %}
         </p>
       </div>
     </div>

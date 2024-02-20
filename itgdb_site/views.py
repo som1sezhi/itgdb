@@ -32,6 +32,14 @@ class PackDetailView(generic.DetailView):
         ).order_by('title_sort').prefetch_related('chart_set', 'banner')
         ctx['songs'] = songs
 
+        # Pack.links shall be a series of alternating link labels and URLs,
+        # separated by line breaks. If there are an odd number of lines,
+        # add an implicit 'Download' label for the first link.
+        links_lines = self.object.links.splitlines()
+        if len(links_lines) % 2 == 1:
+            links_lines.insert(0, 'Download')
+        ctx['links'] = zip(links_lines[::2], links_lines[1::2])
+
         charts = Chart.objects.filter(song__pack=self.object)
         ctx['chart_count'] = charts.count()
 

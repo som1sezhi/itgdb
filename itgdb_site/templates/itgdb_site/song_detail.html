@@ -37,10 +37,12 @@
           </a>
         </td>
       </tr>
+      {% if song.release_date %}
       <tr>
         <th scope="row">Release date</th>
         <td>{{ song.release_date|date }}</td>
       </tr>
+      {% endif %}
       {% if song.title_translit or song.subtitle_translit %}
       <tr>
         <th scope="row">Transliterated title</th>
