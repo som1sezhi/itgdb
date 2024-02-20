@@ -33,7 +33,6 @@ class TestModelAdmin(ExtraButtonsMixin, admin.ModelAdmin):
                 return HttpResponseRedirect('/admin/itgdb_site/pack/')
         else:
             form = PackUploadForm()
-        context['text'] = 'hello'
         context['form'] = form
         return render(req, 'admin/itgdb_site/pack_upload.html', context)
 

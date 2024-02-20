@@ -1,8 +1,7 @@
 {% extends "admin_extra_buttons/action_page.html" %}
 {% load i18n static admin_list admin_urls %}
 {% block action-content %}
-<h1>content!!!!!</h1>
-<p>{{ text }}</p>
+<h1>Upload pack</h1>
 <form method="post" enctype="multipart/form-data">
   {% csrf_token %}
   {{ form }}

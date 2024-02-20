@@ -66,6 +66,12 @@
         <th scope="row">BPM</th>
         <td>{{ song|display_bpm }}</td>
       </tr>
+      {% if song.credit %}
+      <tr>
+        <th scope="row">Credit</th>
+        <td>{{ song.credit }}</td>
+      </tr>
+      {% endif %}
     </table>
   </div>
 </div>
