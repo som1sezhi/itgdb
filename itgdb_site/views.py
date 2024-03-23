@@ -1,6 +1,7 @@
 from typing import Any
 from django.db.models import Case, When, CharField, Count, Min, Max, F, FloatField, Value
 from django.db.models.functions import Coalesce, Upper, Cast
+from django.db.models.query import QuerySet
 from django.views import generic
 from django.contrib.postgres.search import SearchVector
 
@@ -180,9 +181,13 @@ class PackSearchView(generic.ListView):
                 
                 # perform ordering
                 if form.cleaned_data['order_by']:
-                    order_field = F(form.cleaned_data['order_by'])
+                    if form.cleaned_data['order_by'] == 'name':
+                        # do case-insensitive sort
+                        order_field = Upper('name')
+                    else:
+                        order_field = F(form.cleaned_data['order_by'])
                 else:
-                    order_field = F('name')
+                    order_field = Upper('name')
                 if form.cleaned_data['order_dir'] == 'desc':
                     order_field = order_field.desc(nulls_last=True)
                 else:
@@ -259,6 +264,24 @@ class PackSearchView(generic.ListView):
             pack.diff_data = data
         
         ctx['packs'] = packs
+
+        ctx['page_range'] = ctx['paginator'].get_elided_page_range(
+            ctx['page_obj'].number
+        )
+
+        return ctx
+
+
+class SongSearchView(generic.ListView):
+    template_name = 'itgdb_site/song_search.html'
+    context_object_name = 'songs'
+    paginate_by = 50
+    
+    def get_queryset(self) -> QuerySet[Song]:
+        return Song.objects.order_by('title').select_related('pack__category').prefetch_related('chart_set', 'banner')
+    
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        ctx = super().get_context_data(**kwargs)
 
         ctx['page_range'] = ctx['paginator'].get_elided_page_range(
             ctx['page_obj'].number

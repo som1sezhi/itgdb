@@ -1,61 +1,14 @@
-{% extends 'itgdb_site/base.html' %}
+{% extends 'itgdb_site/search.html' %}
 {% load crispy_forms_tags %}
-{% load static %}
 
 {% block title %}Song search{% endblock %}
 
-{% block head_extra %}
-<link href="{% static 'itgdb_site/tables.css' %}" rel="stylesheet" />
+{% block content_title %}Search songs{% endblock %}
+
+{% block form %}
+form!
 {% endblock %}
 
-{% block content %}
-<h1 class="mb-4">Search songs</h1>
-<form method="get" class="p-2">
-  <div class="row g-3">
-    <div class="col">
-      {{ form.q|as_crispy_field }}
-    </div>
-    <div class="col-auto">
-      <button type="submit" class="btn btn-primary">Search</button>
-    </div>
-  </div>
-  <div class="accordion" id="filterAccordion">
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="filterHeader">
-        <button
-          class="accordion-button collapsed p-2 ps-3" type="button"
-          data-bs-toggle="collapse" data-bs-target="#filterBody"
-          aria-expanded="false" aria-controls="filterBody">
-          Filters
-        </button>
-      </h2>
-      <div
-        id="filterBody" class="accordion-collapse collapse"
-        aria-labelledby="filterHeader" data-bs-parent="#filterAccordion">
-        <div class="accordion-body row p-3 pb-0 small">
-          <div class="col">
-            {{ form.steps_type|as_crispy_field }}
-          </div>
-          <div class="col">
-            {{ form.diffs|as_crispy_field }}
-          </div>
-          <div class="col">
-            {{ form.tags|as_crispy_field }}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</form>
-
-{% if packs %}
-
-<ul>
-  {% for pack in packs %}
-    <li><a href="{% url 'itgdb_site:pack_detail' pack.id %}">{{ pack.name }}</a></li>
-  {% endfor %}
-</ul>
-{% else %}
-<p>No results!</p>
-{% endif %}
+{% block search_results %}
+{% include 'itgdb_site/components/song_table.html' %}
 {% endblock %}

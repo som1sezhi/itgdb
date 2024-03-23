@@ -67,9 +67,7 @@ Requires tables.css to be loaded.
 
         {% if not is_pack_detail %}
         <td class="lh-sm">
-          <a href="{% url 'itgdb_site:pack_detail' song.pack.id %}">
-            {{ song.pack.name }}
-          </a>
+          {% include 'itgdb_site/components/pack_ref.html' with pack=song.pack %}
         </td>
         {% endif %}
 

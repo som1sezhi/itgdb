@@ -45,12 +45,7 @@ Requires tables.css to be loaded.
         {% endthumbnail %}
         </td>
         <td class="lh-sm text-start">
-          <a href="{% url 'itgdb_site:pack_detail' pack.id %}">
-            {{ pack.name }}
-          </a>
-          {% if pack.category %}
-            {% include 'itgdb_site/components/category_badge.html' with category=pack.category %}
-          {% endif %}
+          {% include 'itgdb_site/components/pack_ref.html' %} 
           {% for tag in pack.tags.all %}
             {% include 'itgdb_site/components/tag.html' %}
           {% endfor %}

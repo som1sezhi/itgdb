@@ -1,0 +1,43 @@
+{% extends 'itgdb_site/base.html' %}
+{% load static %}
+
+{% block head_extra %}
+<link href="{% static 'itgdb_site/tables.css' %}" rel="stylesheet" />
+<link href="{% static 'itgdb_site/search.css' %}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">{% block content_title %}{% endblock %}</h1>
+
+{% block form %}{% endblock %}
+
+<div class="row ps-3 mt-3 mb-1">
+  Showing
+  {{ page_obj.start_index }}-{{ page_obj.end_index }}
+  of {{ paginator.count }} results
+</div>
+
+{% block search_results %}{% endblock %}
+
+<div class="row mb-4">
+  {% include 'itgdb_site/components/pagination.html' %}
+</div>
+
+{% endblock %}
+
+{% block script_extra %}
+<script type="text/javascript">
+  // remove empty values from query string
+  // https://stackoverflow.com/a/17829481
+  $(document).ready(function() {
+    const form = $('.search-form');
+    form.on('submit', function() {
+      form.find('input, select').each(function() {
+        const input = $(this);
+        if (!input.val())
+          input.prop('disabled', true);
+      });
+    })
+  });
+</script>
+{% endblock %}
