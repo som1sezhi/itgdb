@@ -185,6 +185,13 @@
         chart.update();
       }
     );
+  
+    // due to bootstrap-table altering the DOM, we need to enable
+    // floating scroll on a different class to get it to work.
+    // use .one() to prevent recreating the scrollbar when resorting data
+  $('table').one('post-body.bs.table', function() {
+    $(".fixed-table-body").floatingScroll();
+  });
 
 </script>
 {% endblock %}

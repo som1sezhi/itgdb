@@ -9,7 +9,7 @@ Recognized context variables:
 Requires tables.css to be loaded.
 {% endcomment %}
 
-<div class="table-responsive mb-4">
+<div class="table-responsive mb-4 {% if not is_pack_detail %}floating-scroll{% endif %}">
   <table class="table align-middle text-center rounded overflow-hidden mb-2"
     {% if is_pack_detail %} {# make table sortable #}
     data-toggle="table"
