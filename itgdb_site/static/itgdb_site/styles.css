@@ -56,7 +56,7 @@ table.info-table tr th {
 }
 
 .badge.category-badge {
-    --bs-badge-padding-x: 0.6em;
+    --bs-badge-padding-x: 0.55em;
     color: var(--bs-body-color);
     /* manual vertical center */
     transform: translate(0, -0.08em);
