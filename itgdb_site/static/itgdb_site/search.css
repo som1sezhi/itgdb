@@ -5,6 +5,12 @@ form.search-form .accordion {
     --bs-accordion-body-padding-y: 0.75rem;
 }
 
+form.search-form legend {
+    /* legend is big by default, make it normal size */
+    font-size: unset;
+    margin-bottom: 0;
+}
+
 .page-link.fake-page-link {
     color: var(--bs-body-color);
 }

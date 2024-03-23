@@ -3,10 +3,10 @@ from django.db.models import Case, When, CharField, Count, Min, Max, F, FloatFie
 from django.db.models.functions import Coalesce, Upper, Cast
 from django.db.models.query import QuerySet
 from django.views import generic
-from django.contrib.postgres.search import SearchVector
+from django.contrib.postgres.search import SearchVector, SearchQuery
 
 from .models import Pack, Song, Chart
-from .forms import PackSearchForm
+from .forms import PackSearchForm, SongSearchForm
 
 
 class IndexView(generic.ListView):
@@ -198,11 +198,11 @@ class PackSearchView(generic.ListView):
             except ValueError:
                 qset = Pack.objects.annotate(
                     song_count=Count('song', distinct=True)
-                ).order_by('name')
+                ).order_by(Upper('name'))
         else:
             qset = Pack.objects.annotate(
                 song_count=Count('song', distinct=True)
-            ).order_by('name')
+            ).order_by(Upper('name'))
 
         return qset
 
@@ -278,10 +278,79 @@ class SongSearchView(generic.ListView):
     paginate_by = 50
     
     def get_queryset(self) -> QuerySet[Song]:
-        return Song.objects.order_by('title').select_related('pack__category').prefetch_related('chart_set', 'banner')
+        form = SongSearchForm(self.request.GET)
+        if form.is_valid():
+            q = form.cleaned_data['q']
+            search_by = form.cleaned_data['search_by']
+            category = form.cleaned_data['category']
+            min_length = form.cleaned_data['min_length']
+            max_length = form.cleaned_data['max_length']
+            min_bpm = form.cleaned_data['min_bpm']
+            max_bpm = form.cleaned_data['max_bpm']
+
+            if q:
+                if search_by == 'title':
+                    search_vec = SearchVector(
+                        'title', 'subtitle',
+                        'title_translit', 'subtitle_translit'
+                    )
+                elif search_by == 'artist':
+                    search_vec = SearchVector(
+                        'artist', 'artist_translit'
+                    )
+                else: # search_by == titleartist
+                    search_vec = SearchVector(
+                        'title', 'subtitle',
+                        'title_translit', 'subtitle_translit',
+                        'artist', 'artist_translit'
+                    )
+                
+                qset = Song.objects.annotate(
+                    search=search_vec
+                ).filter(search=SearchQuery(q, search_type='websearch'))
+            else:
+                qset = Song.objects.all()
+
+            if category:
+                qset = qset.filter(pack__category=category)
+            
+            if min_length:
+                qset = qset.filter(length__gte=min_length)
+            if max_length:
+                qset = qset.filter(length__lte=max_length)
+            if min_bpm:
+                qset = qset.filter(min_display_bpm__gte=min_bpm)
+            if max_bpm:
+                qset = qset.filter(max_display_bpm__lte=max_bpm)
+
+            # perform ordering
+            if form.cleaned_data['order_by']:
+                if form.cleaned_data['order_by'] == 'title':
+                    # do case-insensitive sort
+                    order_field = Upper('title')
+                else:
+                    order_field = F(form.cleaned_data['order_by'])
+            else:
+                order_field = Upper('title')
+            if form.cleaned_data['order_dir'] == 'desc':
+                order_field = order_field.desc(nulls_last=True)
+            else:
+                order_field = order_field.asc(nulls_last=True)
+            qset = qset.order_by(order_field)
+
+        else:
+            qset = qset = Song.objects.order_by(Upper('title'))
+
+        return qset
     
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         ctx = super().get_context_data(**kwargs)
+
+        ctx['form'] = SongSearchForm(self.request.GET)
+
+        ctx['songs'] = ctx['songs'] \
+            .select_related('pack__category') \
+            .prefetch_related('chart_set', 'banner')
 
         ctx['page_range'] = ctx['paginator'].get_elided_page_range(
             ctx['page_obj'].number

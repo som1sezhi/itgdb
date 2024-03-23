@@ -1,12 +1,12 @@
 from django import forms
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Field, Row, Column, HTML, Div
+from crispy_forms.layout import Layout, Field, Row, Column, HTML, Fieldset
 from crispy_forms.bootstrap import StrictButton, FieldWithButtons, Accordion, AccordionGroup, PrependedText
 
 from .models import Pack, Tag, PackCategory
 
 
-ACCORDION_ACTIVE_IGNORE_FIELDS = {'q', 'order_by', 'order_dir'}
+ACCORDION_ACTIVE_IGNORE_FIELDS = {'q', 'order_by', 'order_dir', 'search_by'}
 def _get_filter_accordion_active_status(form: forms.Form):
     if form.is_bound and form.is_valid():
         for k, v in form.cleaned_data.items():
@@ -87,7 +87,7 @@ class PackSearchForm(forms.Form):
                 Column(HTML('Order by:'), css_class='col-auto py-1'),
                 Column('order_by', css_class='col-auto'),
                 Column('order_dir', css_class='col-auto'),
-                css_class='g-3'
+                css_class='g-2'
             ),
             Accordion(
                 AccordionGroup('Filters',
@@ -107,40 +107,111 @@ class SongSearchForm(forms.Form):
     q = forms.CharField(
         label='',
         required=False,
-        max_length=255,
-        widget=forms.TextInput(attrs={'placeholder': 'Pack name'})
+        max_length=255
     )
     search_by = forms.ChoiceField(
         label='',
-        required=True,
+        required=False,
         choices={
             'titleartist': 'Title/artist',
             'title': 'Title',
-            'artist': 'Artist',
-        },
-        initial='titleartist'
+            'artist': 'Artist'
+        }
     )
-    steps_type = forms.MultipleChoiceField(
-        label='Has steps type:',
+    order_by = forms.ChoiceField(
+        label='',
         required=False,
-        choices=(('1', 'Single'), ('2', 'Double')),
-        widget=forms.CheckboxSelectMultiple
+        choices={
+            'title': 'Title',
+            'release_date': 'Release date',
+            'id': 'Upload date'
+        }
     )
-    diffs = forms.MultipleChoiceField(
-        label='Has difficulties:',
+    order_dir = forms.ChoiceField(
+        label='',
         required=False,
-        choices=(
-            ('0', 'Novice'),
-            ('1', 'Easy'),
-            ('2', 'Medium'),
-            ('3', 'Hard'),
-            ('4', 'Expert')
-        ),
-        widget=forms.CheckboxSelectMultiple
+        choices={
+            'asc': 'Ascending',
+            'desc': 'Descending',
+        }
     )
-    tags = forms.ModelMultipleChoiceField(
-        label='Pack has tags:',
+    category = forms.ModelChoiceField(
+        label='Pack category:',
         required=False,
-        queryset=Tag.objects.all(),
-        widget=forms.CheckboxSelectMultiple
+        queryset=PackCategory.objects.order_by('name')
     )
+    min_length = forms.FloatField(
+        label='', required=False, min_value=0
+    )
+    max_length = forms.FloatField(
+        label='', required=False, min_value=0
+    )
+    min_bpm = forms.FloatField(
+        label='', required=False
+    )
+    max_bpm = forms.FloatField(
+        label='', required=False
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'get'
+        self.helper.form_class = 'search-form p-2'
+        self.helper.layout = Layout(
+            Row(
+                Column(Field('search_by'), css_class='col-2', style="min-width: 8.5em;"),
+                Column(FieldWithButtons(
+                    Field('q'),
+                    StrictButton("Search", type='submit', css_class='btn btn-primary'),
+                    input_size="input-group-sm",
+                ), css_class='col'),
+                css_class='g-2'
+            ),
+            Row(
+                Column(HTML('Order by:'), css_class='col-auto py-1'),
+                Column('order_by', css_class='col-auto'),
+                Column('order_dir', css_class='col-auto'),
+                css_class='g-2'
+            ),
+            Accordion(
+                AccordionGroup('Filters',
+                    Row(
+                        Column('category'),
+                        Column(
+                            Fieldset(
+                                'Length (seconds):',
+                                Row(
+                                    Column(
+                                        Field('min_length', placeholder='Min'),
+                                        css_class='col-6'
+                                    ),
+                                    Column(
+                                        Field('max_length', placeholder='Max'),
+                                        css_class='col-6'
+                                    ),
+                                    css_class='g-2'
+                                )
+                            )
+                        ),
+                        Column(
+                            Fieldset(
+                                'BPM:',
+                                Row(
+                                    Column(
+                                        Field('min_bpm', placeholder='Min'),
+                                        css_class='col-6'
+                                    ),
+                                    Column(
+                                        Field('max_bpm', placeholder='Max'),
+                                        css_class='col-6'
+                                    ),
+                                    css_class='g-2'
+                                )
+                            )
+                        ),
+                    ),
+                    active=_get_filter_accordion_active_status(self)
+                )
+            )
+        )
