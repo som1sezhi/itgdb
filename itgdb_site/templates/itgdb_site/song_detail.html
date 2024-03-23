@@ -212,7 +212,7 @@
   const diffColors = [];
   const docStyle = getComputedStyle(document.documentElement);
   for (let i = 0; i < 6; i++) {
-    const col = docStyle.getPropertyValue(`--itgdb-diff-${i}`);
+    const col = `rgba(${docStyle.getPropertyValue(`--itgdb-diff-${i}`)}, 0.8)`;
     diffColors.push(col);
   }
   // const peaks = densityData.map((d) => d.peak_nps);

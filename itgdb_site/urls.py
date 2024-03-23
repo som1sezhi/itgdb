@@ -7,4 +7,5 @@ urlpatterns = [
     path('', views.IndexView.as_view(), name='index'),
     path('packs/<int:pk>/', views.PackDetailView.as_view(), name='pack_detail'),
     path('songs/<int:pk>/', views.SongDetailView.as_view(), name='song_detail'),
+    path('pack_search/', views.PackSearchView.as_view(), name='pack_search'),
 ]

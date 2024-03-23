@@ -1,9 +1,11 @@
 from typing import Any
-from django.db.models import Case, When, CharField, Count, Sum
-from django.db.models.functions import Coalesce, Upper
+from django.db.models import Case, When, CharField, Count, Min, Max, F, FloatField, Value
+from django.db.models.functions import Coalesce, Upper, Cast
 from django.views import generic
+from django.contrib.postgres.search import SearchVector
 
 from .models import Pack, Song, Chart
+from .forms import PackSearchForm
 
 
 class IndexView(generic.ListView):
@@ -130,5 +132,136 @@ class SongDetailView(generic.DetailView):
             for chart in charts
         ]
         ctx['charts'] = list(zip(charts, ctx['density_data']))
+
+        return ctx
+
+
+class PackSearchView(generic.ListView):
+    template_name = 'itgdb_site/pack_search.html'
+    context_object_name = 'packs'
+    paginate_by = 2 # TODO: change to reasonable number after testing
+
+    def get_queryset(self):
+        form = PackSearchForm(self.request.GET)
+        if form.is_valid():
+            try:
+                q = form.cleaned_data['q']
+                category = form.cleaned_data['category']
+                steps_types = list(map(int, form.cleaned_data['steps_type']))
+                num_charts = form.cleaned_data['num_charts']
+                tags = form.cleaned_data['tags']
+
+                qset = Pack.objects.filter(name__icontains=q)
+                
+                qset = qset.annotate(
+                    song_count=Count('song', distinct=True)
+                )
+
+                if category:
+                    qset = qset.filter(category=category)
+                
+                if steps_types:
+                    qset = qset.filter(song__chart__steps_type__in=steps_types) \
+                        .annotate(num_steps_type=Count('song__chart__steps_type', distinct=True)) \
+                        .filter(num_steps_type=len(steps_types)) \
+                        .distinct()
+                
+                if num_charts:
+                    qset = qset.annotate(
+                        avg_num_charts=Cast(
+                            Count('song__chart', distinct=True), FloatField()
+                        ) / Cast('song_count', FloatField())
+                    ).filter(
+                        avg_num_charts__gte=num_charts
+                    ).distinct()
+                
+                if tags:
+                    qset = qset.filter(tags__in=form.cleaned_data['tags']).distinct()
+                
+                # perform ordering
+                if form.cleaned_data['order_by']:
+                    order_field = F(form.cleaned_data['order_by'])
+                else:
+                    order_field = F('name')
+                if form.cleaned_data['order_dir'] == 'desc':
+                    order_field = order_field.desc(nulls_last=True)
+                else:
+                    order_field = order_field.asc(nulls_last=True)
+                qset = qset.order_by(order_field)
+
+            # i actually forgot what this was supposed to catch lol
+            except ValueError:
+                qset = Pack.objects.annotate(
+                    song_count=Count('song', distinct=True)
+                ).order_by('name')
+        else:
+            qset = Pack.objects.annotate(
+                song_count=Count('song', distinct=True)
+            ).order_by('name')
+
+        return qset
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        ctx = super().get_context_data(**kwargs)
+        # do we need to create the PackSearchForm twice?
+        ctx['form'] = PackSearchForm(self.request.GET)
+
+        packs = ctx['packs']
+        packs = packs.select_related('banner').prefetch_related('tags')
+
+        # fetch per-pack difficulty count data.
+        # should probably note that strictly speaking, this counts the
+        # number of charts in each diff slot, not the number of songs with
+        # that diff slot, even though i often treat it like the latter.
+        # thus in the case of multiple edit charts, stuff may look technically
+        # incorrect, but i feel like the cases where that matters will be
+        # super rare, so i'll just leave it like this
+        charts = Chart.objects.filter(song__pack__in=packs)
+        diff_counts_queryset = charts.values(
+            'song__pack__id', 'steps_type', 'difficulty',
+        ).annotate(
+            min=Min('meter'),
+            max=Max('meter'),
+            count=Count('difficulty')
+        )
+        # organize the data into a dict
+        diff_data = {}
+        for entry in diff_counts_queryset:
+            pack_id = entry['song__pack__id']
+            steps_type = entry['steps_type']
+            diff = entry['difficulty']
+            diff_data[(pack_id, steps_type, diff)] = {
+                'steps_type': steps_type,
+                'diff': diff,
+                'min_meter': entry['min'],
+                'max_meter': entry['max'],
+                'song_count': entry['count'],
+            }
+        # grab the data from the dict in steps_type+diff order
+        # so the template can just iterate through it.
+        # also figure out if we need to display the double nov column
+        ctx['show_double_nov'] = False
+        for pack in packs:
+            data = []
+            for steps_type in Chart.STEPS_TYPE_CHOICES:
+                for diff in Chart.DIFFICULTY_CHOICES:
+                    key = (pack.id, steps_type, diff)
+                    if key in diff_data:
+                        data.append(diff_data[key])
+                        if steps_type == 2 and diff == 0:
+                            ctx['show_double_nov'] = True
+                    else:
+                        data.append({
+                            'steps_type': steps_type,
+                            'diff': diff,
+                            'song_count': 0
+                        })
+            pack.diff_data = data
+        
+        ctx['packs'] = packs
+
+        ctx['page_range'] = ctx['paginator'].get_elided_page_range(
+            ctx['page_obj'].number
+        )
 
         return ctx

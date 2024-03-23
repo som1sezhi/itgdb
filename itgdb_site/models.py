@@ -1,5 +1,7 @@
 from django.core.files.storage import storages
 from django.db import models
+from django.contrib.postgres.search import SearchVector
+from django.contrib.postgres.indexes import GinIndex
 
 # Callables to pass into the storage argument of a FileField/ImageField.
 # Using a callable prevents the storage from being hardcoded into
@@ -26,9 +28,21 @@ class Tag(models.Model):
         return self.name
 
 
+class PackCategory(models.Model):
+    name = models.CharField(max_length=32)
+    abbr = models.CharField(max_length=4, blank=True, null=True)
+    color = models.CharField(max_length=32, blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Pack(models.Model):
     name = models.CharField(max_length=255, blank=True)
     release_date = models.DateTimeField(blank=True, null=True)
+    category = models.ForeignKey(
+        PackCategory, on_delete=models.SET_NULL, blank=True, null=True
+    )
     tags = models.ManyToManyField(Tag, blank=True)
     links = models.TextField(blank=True)
     banner = models.ForeignKey(
@@ -129,6 +143,13 @@ class Chart(models.Model):
     rolls_count = models.PositiveIntegerField()
     lifts_count = models.PositiveIntegerField()
     fakes_count = models.PositiveIntegerField()
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['steps_type']),
+            models.Index(fields=['difficulty']),
+            models.Index(fields=['meter']),
+        ]
 
     @staticmethod
     def steps_type_to_int(steps_type: str):

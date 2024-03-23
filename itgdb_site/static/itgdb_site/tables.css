@@ -1,0 +1,77 @@
+.bn-col {
+    width: calc(var(--itgdb-row-height) * 2.56 + 0.5em);
+}
+
+td.bn-cell {
+    height: var(--itgdb-row-height);
+    padding: 0;
+}
+
+td.bn-cell img {
+    height: 100%;
+}
+
+.item-name-col {
+    min-width: 12em;
+}
+
+.song-pack-col {
+    min-width: 9em;
+}
+
+th.song-diff {
+    width: 3.6em;
+    min-width: 3.2em;
+    font-size: 0.7em;
+}
+
+/* overrides bootstrap-table styles to make it more compact */
+.bootstrap-table .fixed-table-container .table thead th .sortable {
+    padding: 0.5em;
+    padding-right: 19px !important;
+}
+
+td.song-meter {
+    font-weight: 600;
+    border-width: var(--bs-border-width);
+    padding: 0;
+    background-color: rgba(var(--itgdb-diff-color), 0.6);
+    --itgdb-diff-color: #000;
+}
+
+td.song-meter > a {
+    display: block;
+    width: 100%;
+    padding: calc((var(--itgdb-row-height) - 1em) / 2 - 0.2em) 0;
+    color: inherit;
+    transition: text-shadow 0.2s;
+}
+
+td.song-meter > a:hover {
+    text-shadow: 0px 0px 8px rgb(247, 248, 230);
+    transition: text-shadow 0.2s;
+}
+
+td.diff-0 {
+    --itgdb-diff-color: var(--itgdb-diff-0);
+}
+
+td.diff-1 {
+    --itgdb-diff-color: var(--itgdb-diff-1);
+}
+
+td.diff-2 {
+    --itgdb-diff-color: var(--itgdb-diff-2);
+}
+
+td.diff-3 {
+    --itgdb-diff-color: var(--itgdb-diff-3);
+}
+
+td.diff-4 {
+    --itgdb-diff-color: var(--itgdb-diff-4);
+}
+
+td.diff-5 {
+    --itgdb-diff-color: var(--itgdb-diff-5);
+}

@@ -20,6 +20,8 @@ opencv-python-headless = "*"
 django-debug-toolbar = "*"
 django-mathfilters = "*"
 sorl-thumbnail = "*"
+django-crispy-forms = "*"
+crispy-bootstrap5 = "*"
 
 [dev-packages]
 localstack = "*"

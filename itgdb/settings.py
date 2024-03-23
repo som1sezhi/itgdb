@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     'storages',
     'mathfilters',
     'sorl.thumbnail',
+    'crispy_forms',
+    'crispy_bootstrap5',
     'django_cleanup.apps.CleanupConfig', # keep last
 ]
 
@@ -199,3 +201,7 @@ THUMBNAIL_REDIS_URL = os.environ.get(
     'THUMBNAIL_REDIS_URL', 'redis://localhost:6379'
 )
 THUMBNAIL_STORAGE = 'itgdb_site.storage_backends.ThumbnailStorage'
+
+# django-crispy-forms settings
+CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
+CRISPY_TEMPLATE_PACK = 'bootstrap5'

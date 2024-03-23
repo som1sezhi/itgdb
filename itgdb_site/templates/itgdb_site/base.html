@@ -41,7 +41,7 @@
         <div class="collapse navbar-collapse" id="navbarMenu">
           <ul class="navbar-nav">
             <li class="nav-item me-auto">
-              <a class="nav-link" href="#">Packs</a>
+              <a class="nav-link" href="{% url 'itgdb_site:pack_search' %}">Packs</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="#">Songs</a>
@@ -85,14 +85,29 @@
       }
 
       // initialize the theme toggle icon
-      window.addEventListener('load', () => {
-        setBsTheme(docElem.dataset.bsTheme);
-
-        toggleElem.addEventListener('click', () => {
-          const newTheme = docElem.dataset.bsTheme == 'dark'
-            ? 'light' : 'dark';
-          setBsTheme(newTheme);
-        });
+      window.addEventListener('pageshow', (e) => {
+        // if we are loading from cache (e.g. back button)
+        if (e.persisted) {
+          // if user navigates away to another page, changes the theme,
+          // and then hits the back button, we want the new theme to be 
+          // reflected in this page. the head script won't be rerun,
+          // so we have to do it here
+          // refetch the theme from localStorage
+          const initTheme = localStorage.getItem('bs-theme');
+          if (initTheme) // probably not necessary
+            setBsTheme(initTheme);
+        } else {
+          // otherwise this is a new page load. the theme was set on the
+          // document by the head script, just need to update the button
+          setBsTheme(docElem.dataset.bsTheme);
+          // add the event listener here to ensure it doesnt get re-added
+          // on page revisit
+          toggleElem.addEventListener('click', () => {
+            const newTheme = docElem.dataset.bsTheme == 'dark'
+              ? 'light' : 'dark';
+            setBsTheme(newTheme);
+          });
+        }
       });
 
       // enable bootstrap tooltips

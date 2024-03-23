@@ -1,3 +1,4 @@
+import re
 from django import template
 from django.utils.html import escape
 
@@ -36,3 +37,17 @@ def chart_diff_short(chart):
     diff_mapping = ['N', 'E', 'M', 'H', 'X', 'Ed']
     return steps_type_mapping[chart.steps_type] + \
         diff_mapping[chart.difficulty]
+
+# https://stackoverflow.com/questions/48482319/django-pagination-url
+PAGE_NUMBER_REGEX = re.compile(r'(page=[0-9]*[\&]*)')
+@register.simple_tag  
+def append_page_param(value, page_num=None):
+    value = re.sub(PAGE_NUMBER_REGEX, '', value)
+    if page_num:
+        if not '?' in value:
+            value += f'?page={page_num}'
+        elif value[-1] != '&':
+            value += f'&page={page_num}'
+        else:
+            value += f'page={page_num}'
+    return value

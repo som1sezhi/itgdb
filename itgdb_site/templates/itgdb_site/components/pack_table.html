@@ -1,0 +1,98 @@
+{% load thumbnail %}
+{% load mathfilters %}
+
+{% comment %}
+Recognized context variables:
+- packs (iterator of Pack)
+- show_double_nov (bool)
+Requires tables.css to be loaded.
+{% endcomment %}
+
+<div class="table-responsive mb-4">
+  <table class="table align-middle text-center rounded overflow-hidden mb-2">
+    <thead>
+      <tr class="lh-sm">
+        <th scope="col" rowspan="2" class="bn-col"></th>
+        <th scope="col" rowspan="2" class="text-start item-name-col">Pack name</th>
+        <th scope="col" rowspan="2">Release date</th>
+        <th scope="col" rowspan="2">Song count</th>
+        <th scope="col" colspan="6">Singles</th>
+        <th scope="col" colspan="{% if show_double_nov %}6{% else %}5{% endif %}">Doubles</th>
+      </tr>
+      <tr>
+        <th scope="col" class="song-diff">N</th>
+        <th scope="col" class="song-diff">E</th>
+        <th scope="col" class="song-diff">M</th>
+        <th scope="col" class="song-diff">H</th>
+        <th scope="col" class="song-diff">X</th>
+        <th scope="col" class="song-diff">Ed</th>
+        {% if show_double_nov %}
+        <th scope="col" class="song-diff">N</th>
+        {% endif %}
+        <th scope="col" class="song-diff">E</th>
+        <th scope="col" class="song-diff">M</th>
+        <th scope="col" class="song-diff">H</th>
+        <th scope="col" class="song-diff">X</th>
+        <th scope="col" class="song-diff">Ed</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for pack in packs %}
+      <tr>
+        <td class="bn-cell">
+        {% thumbnail pack.banner.image "x50" as im %}
+          <img src="{{ im.url }}" />
+        {% endthumbnail %}
+        </td>
+        <td class="lh-sm text-start">
+          <a href="{% url 'itgdb_site:pack_detail' pack.id %}">
+            {{ pack.name }}
+          </a>
+          {% if pack.category %}
+            {% include 'itgdb_site/components/category_badge.html' with category=pack.category %}
+          {% endif %}
+          {% for tag in pack.tags.all %}
+            {% include 'itgdb_site/components/tag.html' %}
+          {% endfor %}
+        </td>
+        
+        <td>
+          {% if pack.release_date %}
+            {{ pack.release_date|date:'M j, Y' }}
+          {% else %}
+            <span class="fst-italic text-muted">Unknown</span>
+          {% endif %}
+        </td>
+
+        <td>
+          {{ pack.song_count }}
+        </td>
+
+        {% for data in pack.diff_data %}
+          {% if data.steps_type != 2 or data.diff != 0 or show_double_nov %}
+            {% if data.song_count %}
+              <td
+                class="song-meter small diff-{{ data.diff }} has-tooltip"
+                style="background: linear-gradient(
+                  0deg,
+                  rgba(var(--itgdb-diff-color), 0.6) {{ data.song_count|div:pack.song_count|mul:100 }}%,
+                  rgba(var(--itgdb-diff-color), 0.2) {{ data.song_count|div:pack.song_count|mul:100 }}%
+                );"
+                data-bs-title="{{ data.song_count }} chart{{ data.song_count|pluralize }} in this slot"
+              >
+                {% if data.min_meter == data.max_meter %}
+                  {{ data.min_meter }}
+                {% else %}
+                  {{ data.min_meter }}<span class="text-muted">-</span>{{ data.max_meter }}
+                {% endif %}
+              </td>
+            {% else %}
+              <td class="song-meter"></td>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>

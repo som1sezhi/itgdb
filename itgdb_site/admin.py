@@ -7,7 +7,7 @@ from admin_extra_buttons.api import ExtraButtonsMixin, button
 from django_celery_results.admin import TaskResultAdmin
 from django_celery_results.models import TaskResult
 
-from .models import Tag, Pack, Song, Chart, ImageFile
+from .models import Tag, Pack, Song, Chart, ImageFile, PackCategory
 from .forms import PackUploadForm
 from .tasks import process_pack_upload
 
@@ -27,6 +27,7 @@ class TestModelAdmin(ExtraButtonsMixin, admin.ModelAdmin):
 
                 # prepare form data so celery can convert it to json
                 data = form.cleaned_data
+                data['category'] = data['category'].id
                 data['tags'] = [tag.id for tag in data['tags']]
                 del data['file']
                 process_pack_upload.delay(data, filename)
@@ -48,3 +49,4 @@ admin.site.register(Song)
 admin.site.register(Chart)
 admin.site.register(Tag)
 admin.site.register(ImageFile)
+admin.site.register(PackCategory)

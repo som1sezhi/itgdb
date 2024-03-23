@@ -103,6 +103,7 @@ def process_pack_upload(pack_data, filename):
             p = Pack(
                 name = pack_data['name'] or simfile_pack.name,
                 release_date = pack_data['release_date'],
+                category_id = pack_data['category'],
                 links = pack_data['links']
             )
             p.save()
