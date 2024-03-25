@@ -1,0 +1,3 @@
+location /admin/itgdb_site/pack/pack_upload/ {
+  client_max_body_size 1G;
+}
