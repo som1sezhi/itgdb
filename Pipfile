@@ -22,6 +22,8 @@ django-mathfilters = "*"
 sorl-thumbnail = "*"
 django-crispy-forms = "*"
 crispy-bootstrap5 = "*"
+gunicorn = "*"
+whitenoise = "*"
 
 [dev-packages]
 localstack = "*"

@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: ./docker/prod/django/Dockerfile
+    command: /start.sh
+    volumes:
+      - ./uploads:/app/uploads
+    expose:
+      - 8000
+    env_file:
+      - ./.env
+      - ./.env.vhost
+    depends_on:
+      - redis
+      - db
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: ./docker/prod/django/Dockerfile
+    command: /start-celeryworker.sh
+    volumes:
+      - ./uploads:/app/uploads
+    env_file:
+      - ./.env
+    depends_on:
+      - redis
+      - db
+  
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - prod_postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - HELLO=${SECRET_KEY}
+
+  redis:
+    image: redis:7-alpine
+
+  nginx-proxy:
+    container_name: nginx-proxy
+    build: ./docker/prod/nginx
+    restart: always
+    ports:
+      - 443:443
+      - 80:80
+    volumes:
+      - certs:/etc/nginx/certs
+      - html:/usr/share/nginx/html
+      - vhost:/etc/nginx/vhost.d
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    depends_on:
+      - web
+    
+  acme-companion:
+    image: nginxproxy/acme-companion
+    env_file:
+      - ./.env.proxy-companion
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - certs:/etc/nginx/certs
+      - html:/usr/share/nginx/html
+      - vhost:/etc/nginx/vhost.d
+      - acme:/etc/acme.sh
+    depends_on:
+      - nginx-proxy
+
+volumes:
+  prod_postgres_data:
+  certs:
+  html:
+  vhost:
+  acme:

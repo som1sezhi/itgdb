@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 import os
 from pathlib import Path
+import logging.config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -30,6 +31,10 @@ if not DEBUG:
     ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(' ')
 # if DEBUG, use default ALLOWED_HOSTS (empty list)
 # to allow localhost during dev
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(' ')
 
 
 # Application definition
@@ -59,6 +64,10 @@ MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
 
     'django.middleware.security.SecurityMiddleware',
+
+    # place after SecurityMiddleware, before all other middleware
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -139,6 +148,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
@@ -165,18 +176,22 @@ AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'itgdbtest')
 AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', 'http://s3.localhost.localstack.cloud:4566')
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', 'fake')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', 'fake')
+AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME')
 base_bucket_storage_options = {
     'bucket_name': AWS_STORAGE_BUCKET_NAME,
     'endpoint_url': AWS_S3_ENDPOINT_URL,
     'access_key': AWS_ACCESS_KEY_ID,
     'secret_key': AWS_SECRET_ACCESS_KEY,
 }
+# TODO: see if i can get away with a bogus region name for localstack
+if AWS_S3_REGION_NAME:
+    base_bucket_storage_options['region_name'] = AWS_S3_REGION_NAME
 STORAGES = {
     'default': {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
     },
     'staticfiles': {
-        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
     },
     'simfiles': {
         'BACKEND': 'storages.backends.s3.S3Storage',
@@ -206,3 +221,31 @@ THUMBNAIL_STORAGE = 'itgdb_site.storage_backends.ThumbnailStorage'
 # django-crispy-forms settings
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
+
+# Logging Configuration
+# https://www.digitalocean.com/community/tutorials/how-to-build-a-django-and-gunicorn-application-with-docker
+# Clear prev config
+LOGGING_CONFIG = None
+# Get loglevel from env
+LOGLEVEL = os.getenv('DJANGO_LOGLEVEL', 'info').upper()
+logging.config.dictConfig({
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'console': {
+            'format': '%(asctime)s %(levelname)s [%(name)s:%(lineno)s] %(module)s %(process)d %(thread)d %(message)s',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'console',
+        },
+    },
+    'loggers': {
+        '': {
+            'level': LOGLEVEL,
+            'handlers': ['console',],
+        },
+    },
+})

@@ -27,7 +27,8 @@ class TestModelAdmin(ExtraButtonsMixin, admin.ModelAdmin):
 
                 # prepare form data so celery can convert it to json
                 data = form.cleaned_data
-                data['category'] = data['category'].id
+                if data['category']:
+                    data['category'] = data['category'].id
                 data['tags'] = [tag.id for tag in data['tags']]
                 del data['file']
                 process_pack_upload.delay(data, filename)
