@@ -7,7 +7,7 @@ services:
       dockerfile: ./docker/prod/django/Dockerfile
     command: /start.sh
     volumes:
-      - ./uploads:/app/uploads
+      - uploads:/app/uploads
     expose:
       - 8000
     env_file:
@@ -23,7 +23,7 @@ services:
       dockerfile: ./docker/prod/django/Dockerfile
     command: /start-celeryworker.sh
     volumes:
-      - ./uploads:/app/uploads
+      - uploads:/app/uploads
     env_file:
       - ./.env
     depends_on:
@@ -44,7 +44,10 @@ services:
 
   nginx-proxy:
     container_name: nginx-proxy
-    build: ./docker/prod/nginx
+    build:
+      context: ./docker/prod/nginx
+      args:
+        - HOST_DOMAIN=${HOST_DOMAIN}
     restart: always
     ports:
       - 443:443
@@ -72,6 +75,7 @@ services:
 
 volumes:
   prod_postgres_data:
+  uploads:
   certs:
   html:
   vhost:

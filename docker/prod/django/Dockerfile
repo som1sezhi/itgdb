@@ -55,6 +55,7 @@ RUN sed -i 's/\r$//g' /start-celeryworker.sh
 RUN chmod +x /start-celeryworker.sh
 
 COPY . /app/
+RUN mkdir /app/uploads
 
 RUN useradd djangouser
 

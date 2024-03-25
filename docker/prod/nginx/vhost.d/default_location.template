@@ -1,0 +1,11 @@
+# allow large file uploads just for pack uploading
+location /admin/itgdb_site/pack/pack_upload/ {
+  client_max_body_size 1G;
+
+  # nginx doesn't let proxy_pass be inherited, so we have to repeat it here.
+  # we replace the placeholder with our actual domain at build time.
+  # this feels kinda jank but i can't think of a nicer way to do this
+  proxy_pass http://{{domain}};
+  # idk if this is also inherited but might as well repeat it just in case
+  set $upstream_keepalive false;
+}
