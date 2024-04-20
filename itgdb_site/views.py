@@ -354,7 +354,7 @@ class SongSearchView(generic.ListView):
             .prefetch_related('chart_set', 'banner')
 
         ctx['page_range'] = ctx['paginator'].get_elided_page_range(
-            ctx['page_obj'].number
+            ctx['page_obj'].number, on_each_side=2, on_ends=1
         )
 
         return ctx
