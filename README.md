@@ -19,3 +19,5 @@ Create bucket:
 ```shell
 awslocal s3api create-bucket --bucket itgdbtest
 ```
+
+In VS Code, when changing .env, make sure to restart the terminal before running docker-compose.

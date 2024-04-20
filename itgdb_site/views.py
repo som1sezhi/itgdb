@@ -289,25 +289,26 @@ class SongSearchView(generic.ListView):
             max_bpm = form.cleaned_data['max_bpm']
 
             if q:
+                search_vec_title_fields = [
+                    'title', 'subtitle', 'title_translit', 'subtitle_translit'
+                ]
+                search_vec_artist_fields = [
+                    'artist', 'artist_translit',
+                ]
                 if search_by == 'title':
-                    search_vec = SearchVector(
-                        'title', 'subtitle',
-                        'title_translit', 'subtitle_translit'
-                    )
+                    search_vec_args = search_vec_title_fields
                 elif search_by == 'artist':
-                    search_vec = SearchVector(
-                        'artist', 'artist_translit'
-                    )
+                    search_vec_args = search_vec_artist_fields
                 else: # search_by == titleartist
-                    search_vec = SearchVector(
-                        'title', 'subtitle',
-                        'title_translit', 'subtitle_translit',
-                        'artist', 'artist_translit'
-                    )
+                    search_vec_args = \
+                        search_vec_title_fields + search_vec_artist_fields
                 
-                qset = Song.objects.annotate(
-                    search=search_vec
-                ).filter(search=SearchQuery(q, search_type='websearch'))
+                qset = Song.objects.annotate(search=SearchVector(
+                    *search_vec_args,
+                    config='public.itgdb_search'
+                )).filter(search=SearchQuery(
+                    q, search_type='websearch', config='public.itgdb_search'
+                ))
             else:
                 qset = Song.objects.all()
 
