@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
         ),
         migrations.RunSQL(
             sql='''ALTER TEXT SEARCH CONFIGURATION public.itgdb_search
-                ALTER MAPPING FOR asciiword, asciihword, hword_asciipart, hword, hword_part, word
+                ALTER MAPPING FOR asciiword, asciihword, hword_asciipart, hword, hword_part, word, blank
                 WITH simple_nostop;''',
             reverse_sql=migrations.RunSQL.noop
         ),
