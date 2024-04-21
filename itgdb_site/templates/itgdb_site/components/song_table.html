@@ -22,6 +22,7 @@ Requires tables.css to be loaded.
         <th data-field="title" data-sortable="true" scope="col" rowspan="2" class="text-start item-name-col">Song</th>
         {% if not is_pack_detail %}
         <th scope="col" rowspan="2" class="song-pack-col">Pack</th>
+        <th scope="col" rowspan="2" class="song-pack-col">Release date</th>
         {% endif %}
         <th data-field="len" data-sortable="true" scope="col" rowspan="2">Length</th>
         <th data-field="bpm" data-sortable="true" scope="col" rowspan="2">BPM</th>
@@ -68,6 +69,14 @@ Requires tables.css to be loaded.
         {% if not is_pack_detail %}
         <td class="lh-sm">
           {% include 'itgdb_site/components/pack_ref.html' with pack=song.pack %}
+        </td>
+
+        <td class="lh-sm">
+          {% if song.release_date %}
+            {{ song.release_date|date:'M j, Y' }}
+          {% else %}
+            <span class="fst-italic text-muted">Unknown</span>
+          {% endif %}
         </td>
         {% endif %}
 

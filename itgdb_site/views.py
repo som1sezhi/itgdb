@@ -266,7 +266,7 @@ class PackSearchView(generic.ListView):
         ctx['packs'] = packs
 
         ctx['page_range'] = ctx['paginator'].get_elided_page_range(
-            ctx['page_obj'].number
+            ctx['page_obj'].number, on_each_side=2, on_ends=1
         )
 
         return ctx
@@ -352,6 +352,18 @@ class SongSearchView(generic.ListView):
         ctx['songs'] = ctx['songs'] \
             .select_related('pack__category') \
             .prefetch_related('chart_set', 'banner')
+        
+        # iterate through charts manually to determine existence of a doubles
+        # novice chart. hopefully this takes advantage of prefetching so
+        # we can avoid having to hit the database
+        ctx['show_double_nov'] = False
+        for song in ctx['songs']:
+            for chart in song.chart_set.all():
+                if chart.steps_type == 2 and chart.difficulty == 0:
+                    ctx['show_double_nov'] = True
+                    break
+            if ctx['show_double_nov']:
+                break
 
         ctx['page_range'] = ctx['paginator'].get_elided_page_range(
             ctx['page_obj'].number, on_each_side=2, on_ends=1
