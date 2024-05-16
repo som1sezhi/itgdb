@@ -6,7 +6,7 @@ from django.views import generic
 from django.contrib.postgres.search import SearchVector, SearchQuery
 
 from .models import Pack, Song, Chart
-from .forms import PackSearchForm, SongSearchForm
+from .forms import PackSearchForm, SongSearchForm, ChartSearchForm
 
 
 class IndexView(generic.ListView):
@@ -340,7 +340,7 @@ class SongSearchView(generic.ListView):
             qset = qset.order_by(order_field)
 
         else:
-            qset = qset = Song.objects.order_by(Upper('title'))
+            qset = Song.objects.order_by(Upper('title'))
 
         return qset
     
@@ -364,6 +364,113 @@ class SongSearchView(generic.ListView):
                     break
             if ctx['show_double_nov']:
                 break
+
+        ctx['page_range'] = ctx['paginator'].get_elided_page_range(
+            ctx['page_obj'].number, on_each_side=2, on_ends=1
+        )
+
+        return ctx
+
+
+class ChartSearchView(generic.ListView):
+    template_name = 'itgdb_site/chart_search.html'
+    context_object_name = 'charts'
+    paginate_by = 50
+    
+    def get_queryset(self) -> QuerySet[Song]:
+        form = ChartSearchForm(self.request.GET)
+        if form.is_valid():
+            print(form.cleaned_data)
+            data = form.cleaned_data
+            q = data['q']
+            search_by = data['search_by']
+
+            if q:
+                if search_by == 'hash':
+                    qset = Chart.objects.filter(chart_hash__istartswith=q)
+                else:
+                    search_vec_title_fields = [
+                        'song__title', 'song__subtitle',
+                        'song__title_translit', 'song__subtitle_translit'
+                    ]
+                    search_vec_artist_fields = [
+                        'song__artist', 'song__artist_translit',
+                    ]
+                    if search_by == 'title':
+                        search_vec_args = search_vec_title_fields
+                    elif search_by == 'artist':
+                        search_vec_args = search_vec_artist_fields
+                    elif search_by == 'desc':
+                        search_vec_args = [
+                            'credit', 'description', 'chart_name'
+                        ]
+                    else: # search_by == titleartist
+                        search_vec_args = \
+                            search_vec_title_fields + search_vec_artist_fields
+                    
+                    qset = Chart.objects.annotate(search=SearchVector(
+                        *search_vec_args,
+                        config='public.itgdb_search'
+                    )).filter(search=SearchQuery(
+                        q, search_type='websearch', config='public.itgdb_search'
+                    ))
+            else:
+                qset = Chart.objects.all()
+
+            if data['category']:
+                qset = qset.filter(song__pack__category=data['category'])
+            
+            if data['min_length']:
+                qset = qset.filter(song__length__gte=data['min_length'])
+            if data['max_length']:
+                qset = qset.filter(song__length__lte=data['max_length'])
+            if data['min_bpm']:
+                qset = qset.filter(song__min_display_bpm__gte=data['min_bpm'])
+            if data['max_bpm']:
+                qset = qset.filter(song__max_display_bpm__lte=data['max_bpm'])
+            
+            if data['steps_type']:
+                qset = qset.filter(steps_type=data['steps_type'])
+            if data['diff']:
+                qset = qset.filter(difficulty__in=data['diff'])
+            if data['min_meter']:
+                qset = qset.filter(meter__gte=data['min_meter'])
+            if data['max_meter']:
+                qset = qset.filter(meter__lte=data['max_meter'])
+
+            # perform ordering
+            if data['order_by']:
+                if data['order_by'] == 'title':
+                    # do case-insensitive sort
+                    order_fields = [Upper('song__title')]
+                else: # release_date
+                    order_fields = [
+                        F('song__release_date'), Upper('song__title')
+                    ]
+            else:
+                order_fields = [Upper('song__title')]
+            order_fields.extend([F('steps_type'), F('difficulty')])
+            if data['order_dir'] == 'desc':
+                order_fields = [
+                    field.desc(nulls_last=True) for field in order_fields
+                ]
+            else:
+                order_fields = [
+                    field.asc(nulls_last=True) for field in order_fields
+                ]
+            qset = qset.order_by(*order_fields)
+
+        else:
+            qset = Chart.objects.order_by(Upper('song__title'))
+        return qset
+    
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        ctx = super().get_context_data(**kwargs)
+
+        ctx['form'] = ChartSearchForm(self.request.GET)
+
+        ctx['charts'] = ctx['charts'] \
+            .select_related('song__pack__category', 'song__banner')
 
         ctx['page_range'] = ctx['paginator'].get_elided_page_range(
             ctx['page_obj'].number, on_each_side=2, on_ends=1

@@ -1,0 +1,14 @@
+{% extends 'itgdb_site/search.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Chart search{% endblock %}
+
+{% block content_title %}Search charts{% endblock %}
+
+{% block form %}
+{% crispy form %}
+{% endblock %}
+
+{% block search_results %}
+{% include 'itgdb_site/components/chart_table.html' %}
+{% endblock %}

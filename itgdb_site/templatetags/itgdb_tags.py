@@ -4,6 +4,13 @@ from django.utils.html import escape
 
 register = template.Library()
 
+def _get_chart_desc_lines(chart):
+    lines = []
+    for line in (chart.credit, chart.description, chart.chart_name):
+        if line and line not in lines:
+            lines.append(line)
+    return lines
+
 @register.filter
 def duration(value):
     value = round(value)
@@ -24,18 +31,30 @@ def display_bpm(song):
 
 @register.filter
 def chart_tooltip(chart):
-    lines = []
-    for line in (chart.credit, chart.description, chart.chart_name):
-        if line and line not in lines:
-            lines.append(line)
-    tooltip = '<br />'.join(map(escape, lines))
-    return f'{tooltip}'
+    lines = _get_chart_desc_lines(chart)
+    return '<br />'.join(map(escape, lines))
+
+@register.filter
+def chart_desc_display(chart):
+    lines = _get_chart_desc_lines(chart)
+    for i, line in enumerate(lines):
+        line = escape(line)
+        if i > 0:
+            lines[i] = f'<span class="text-muted">{line}</span>'
+    return '<br />'.join(lines)
 
 @register.filter
 def chart_diff_short(chart):
     steps_type_mapping = {1: 'S', 2: 'D'}
     diff_mapping = ['N', 'E', 'M', 'H', 'X', 'Ed']
     return steps_type_mapping[chart.steps_type] + \
+        diff_mapping[chart.difficulty]
+
+@register.filter
+def chart_diff_long(chart):
+    steps_type_mapping = {1: 'Single', 2: 'Double'}
+    diff_mapping = ['Novice', 'Easy', 'Medium', 'Hard', 'Expert', 'Edit']
+    return steps_type_mapping[chart.steps_type] + ' ' + \
         diff_mapping[chart.difficulty]
 
 # https://stackoverflow.com/questions/48482319/django-pagination-url

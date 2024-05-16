@@ -22,10 +22,11 @@ Requires tables.css to be loaded.
         <th data-field="title" data-sortable="true" scope="col" rowspan="2" class="text-start item-name-col">Song</th>
         {% if not is_pack_detail %}
         <th scope="col" rowspan="2" class="song-pack-col">Pack</th>
-        <th scope="col" rowspan="2" class="song-pack-col">Release date</th>
-        {% endif %}
+        <th scope="col" rowspan="2" class="song-info-col"></th>
+        {% else %}
         <th data-field="len" data-sortable="true" scope="col" rowspan="2">Length</th>
         <th data-field="bpm" data-sortable="true" scope="col" rowspan="2">BPM</th>
+        {% endif %}
         <th scope="col" colspan="6">Singles</th>
         <th scope="col" colspan="{% if show_double_nov %}6{% else %}5{% endif %}">Doubles</th>
       </tr>
@@ -71,15 +72,23 @@ Requires tables.css to be loaded.
           {% include 'itgdb_site/components/pack_ref.html' with pack=song.pack %}
         </td>
 
-        <td class="lh-sm">
+        <td class="text-start small">
+          <span class="opacity-50">
+            <i class="bi-calendar3 has-tooltip" data-bs-title="Release date">
+            </i>&nbsp;
+          </span>
           {% if song.release_date %}
             {{ song.release_date|date:'M j, Y' }}
           {% else %}
             <span class="fst-italic text-muted">Unknown</span>
           {% endif %}
+          <br />
+          {{ song.length|duration }}
+          <span class="opacity-25">|</span>
+          <span class="opacity-50">BPM</span>
+          {{ song|display_bpm }}
         </td>
-        {% endif %}
-
+        {% else %}
         <td>
           <span data-sort-key="{{ song.length }}">{{ song.length|duration }}</span>
         </td>
@@ -89,6 +98,7 @@ Requires tables.css to be loaded.
             {{ song|display_bpm }}
           </span>
         </td>
+        {% endif %}
 
         {% with charts=song.get_charts_by_difficulty %}
           {% for chart_set in charts %}

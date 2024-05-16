@@ -1,0 +1,86 @@
+{% load itgdb_tags %}
+{% load thumbnail %}
+
+{% comment %}
+Recognized context variables:
+- chart (iterator of Chart)
+Requires tables.css to be loaded.
+{% endcomment %}
+
+<div class="table-responsive mb-4 floating-scroll">
+  <table class="table align-middle text-center rounded overflow-hidden mb-2">
+    <thead>
+      <tr>
+        <th scope="col" class="bn-col"></th>
+        <th scope="col" class="text-start item-name-col">Song</th>
+        <th scope="col" class="song-pack-col">Pack</th>
+        <th scope="col" class="song-info-col"></th>
+        <th scope="col" class="song-diff"></th>
+        <th scope="col" class="song-diff"></th>
+        <th scope="col" class="text-start chart-desc-col">Description</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for chart in charts %}
+      <tr>
+
+        <td class="bn-cell">
+        {% thumbnail chart.song.banner.image "x50" as im %}
+          <img src="{{ im.url }}" />
+        {% endthumbnail %}
+        </td>
+
+        <td class="lh-sm text-start">
+          <a href="{% url 'itgdb_site:song_detail' chart.song.id %}#chart-{{ chart.id }}">
+            {{ chart.song.title }}
+            <span class="song-subtitle">{{ chart.song.subtitle }}</span>
+          </a><br />
+          <span class="song-artist text-muted">{{ chart.song.artist }}</span>
+        </td>
+
+        <td class="lh-sm">
+          {% include 'itgdb_site/components/pack_ref.html' with pack=chart.song.pack %}
+        </td>
+
+        <td class="text-start small">
+          <span class="opacity-50">
+            <i class="bi-calendar3 has-tooltip" data-bs-title="Release date">
+            </i>&nbsp;
+          </span>
+          {% if chart.song.release_date %}
+            {{ chart.song.release_date|date:'M j, Y' }}
+          {% else %}
+            <span class="fst-italic text-muted">Unknown</span>
+          {% endif %}
+          <br />
+          {{ chart.song.length|duration }}
+          <span class="opacity-25">|</span>
+          <span class="opacity-50">BPM</span>
+          {{ chart.song|display_bpm }}
+        </td>
+
+        <td class="small">
+          <span style="color: var(--itgdb-diff-{{ chart.difficulty }}-bg)">
+            {{ chart|chart_diff_short }}
+          </span>
+        </td>
+
+        <td class="song-meter diff-{{ chart.difficulty }}">
+          <a
+            href="{% url 'itgdb_site:song_detail' chart.song.id %}#chart-{{ chart.id }}"
+          >
+            {{ chart.meter }}
+          </a>
+        </td>
+
+        <td class="lh-sm small text-start">
+        {% autoescape off %}
+          {{ chart|chart_desc_display }}
+        {% endautoescape %}
+        </td>
+
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>

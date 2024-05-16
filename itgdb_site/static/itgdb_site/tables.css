@@ -19,10 +19,23 @@ td.bn-cell img {
     min-width: 9em;
 }
 
+.song-info-col {
+    min-width: 8.8em;
+}
+
+.chart-desc-col {
+    min-width: 20em;
+}
+
 th.song-diff {
     width: 3.6em;
     min-width: 3.2em;
     font-size: 0.7em;
+}
+
+td.song-diff {
+    width: 3.6em;
+    min-width: 3.2em;
 }
 
 /* overrides bootstrap-table styles to make it more compact */
@@ -50,6 +63,11 @@ td.song-meter > a {
 td.song-meter > a:hover {
     text-shadow: 0px 0px 8px rgb(247, 248, 230);
     transition: text-shadow 0.2s;
+}
+
+td.chart-diff-indicator {
+    padding-left: 0.2em;
+    padding-right: 0.5em;
 }
 
 td.diff-0 {
