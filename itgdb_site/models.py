@@ -18,7 +18,7 @@ class ImageFile(models.Model):
     image = models.ImageField(storage=get_simfilemedia_storage)
 
     def __str__(self):
-        return f'[{self.pack.name}] {self.image.name.split("_", 1)[1]}'
+        return f'{self.id}: {self.image.name.split("_", 1)[1]}'
 
 
 class Tag(models.Model):
@@ -55,20 +55,21 @@ class Pack(models.Model):
 
 
 class Song(models.Model):
-    pack = models.ForeignKey(Pack, on_delete=models.CASCADE, null=True)
-    title = models.CharField(max_length=500)
-    subtitle = models.CharField(max_length=500)
-    artist = models.CharField(max_length=255)
-    title_translit = models.CharField(max_length=500)
-    subtitle_translit = models.CharField(max_length=500)
-    artist_translit = models.CharField(max_length=255)
-    credit = models.CharField(max_length=255)
+    pack = models.ForeignKey(Pack, on_delete=models.CASCADE, null=True, blank=True)
+    title = models.CharField(max_length=500, blank=True)
+    subtitle = models.CharField(max_length=500, blank=True)
+    artist = models.CharField(max_length=255, blank=True)
+    title_translit = models.CharField(max_length=500, blank=True)
+    subtitle_translit = models.CharField(max_length=500, blank=True)
+    artist_translit = models.CharField(max_length=255, blank=True)
+    credit = models.CharField(max_length=255, blank=True)
     min_bpm = models.FloatField()
     max_bpm = models.FloatField()
     min_display_bpm = models.FloatField(null=True, blank=True)
     max_display_bpm = models.FloatField(null=True, blank=True)
     length = models.FloatField()
     release_date = models.DateTimeField(null=True, blank=True)
+    links = models.TextField(blank=True, default='')
     simfile = models.FileField(storage=get_simfiles_storage)
     banner = models.ForeignKey(
         ImageFile, on_delete=models.SET_NULL, related_name='banner_songs',
@@ -87,8 +88,18 @@ class Song(models.Model):
         blank=True, null=True
     )
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(pack__isnull=True) | models.Q(links__exact=''),
+                name='links_only_for_singles'
+            )
+        ]
+
     def __str__(self):
-        return f'[{self.pack.name}] {self.title} {self.subtitle}'
+        if self.pack:
+            return f'[{self.pack.name}] {self.title} {self.subtitle}'
+        return f'[<single>] {self.title} {self.subtitle}'
     
     def get_charts_by_difficulty(self):
         charts = [
@@ -132,6 +143,7 @@ class Chart(models.Model):
     description = models.CharField(max_length=255, null=True, blank=True)
     chart_name = models.CharField(max_length=255, null=True, blank=True)
     chart_hash = models.CharField(max_length=40)
+    release_date = models.DateTimeField(null=True, blank=True)
     density_graph = models.JSONField()
     objects_count = models.PositiveIntegerField()
     steps_count = models.PositiveIntegerField()

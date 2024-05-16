@@ -73,6 +73,16 @@
       </tr>
       {% endif %}
     </table>
+    <p class="mb-1">
+    {% for link_label, link_url in links %}
+      <a href="{{ link_url }}" target="_blank" rel="noopener noreferrer">
+          {{ link_label }}
+      </a>
+      {% if not forloop.last %}
+        &#x2022;
+      {% endif %}
+    {% endfor %}
+    </p>
   </div>
 </div>
 
@@ -120,13 +130,10 @@
             <td>{{ line }}</td>
           </tr>
         {% endfor %}
-          <tr>
-            <th scope="row">Hash</th>
-            <td>{{ chart.chart_hash|slice:16 }}</td>
-          </tr>
         </table>
       </div>
     </div>
+
     <div class="row mb-3">
       <div class="col-12 col-sm-6">
         <table class="table table-sm info-table count-table mb-0">
@@ -165,6 +172,23 @@
           <tr>
             <th scope="row">Lifts</th>
             <td>{{ chart.lifts_count }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col=12">
+        <table class="table table-sm info-table">
+        {% if chart.release_date %}
+          <tr>
+            <th scope="row">Release date</th>
+            <td>{{ chart.release_date|date }}</td>
+          </tr>
+        {% endif %}
+          <tr>
+            <th scope="row">Hash</th>
+            <td>{{ chart.chart_hash|slice:16 }}</td>
           </tr>
         </table>
       </div>

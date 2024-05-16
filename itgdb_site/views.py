@@ -9,6 +9,19 @@ from .models import Pack, Song, Chart
 from .forms import PackSearchForm, SongSearchForm, ChartSearchForm
 
 
+def _create_links_iterable(links: str):
+    '''Given the contents of a links field, parse it into an iterable
+    of (link label, link URL) pairs.
+    '''
+    # A links field shall be a series of alternating link labels and URLs,
+    # separated by line breaks. If there are an odd number of lines,
+    # add an implicit 'Download' label for the first link.
+    links_lines = links.splitlines()
+    if len(links_lines) % 2 == 1:
+        links_lines.insert(0, 'Download')
+    return zip(links_lines[::2], links_lines[1::2])
+
+
 class IndexView(generic.ListView):
     template_name = 'itgdb_site/index.html'
     context_object_name = 'latest_uploaded_packs'
@@ -35,13 +48,7 @@ class PackDetailView(generic.DetailView):
         ).order_by('title_sort').prefetch_related('chart_set', 'banner')
         ctx['songs'] = songs
 
-        # Pack.links shall be a series of alternating link labels and URLs,
-        # separated by line breaks. If there are an odd number of lines,
-        # add an implicit 'Download' label for the first link.
-        links_lines = self.object.links.splitlines()
-        if len(links_lines) % 2 == 1:
-            links_lines.insert(0, 'Download')
-        ctx['links'] = zip(links_lines[::2], links_lines[1::2])
+        ctx['links'] = _create_links_iterable(self.object.links)
 
         charts = Chart.objects.filter(song__pack=self.object)
         ctx['chart_count'] = charts.count()
@@ -132,6 +139,7 @@ class SongDetailView(generic.DetailView):
             }
             for chart in charts
         ]
+        ctx['links'] = _create_links_iterable(self.object.links)
         ctx['charts'] = list(zip(charts, ctx['density_data']))
 
         return ctx
@@ -445,7 +453,7 @@ class ChartSearchView(generic.ListView):
                     order_fields = [Upper('song__title')]
                 else: # release_date
                     order_fields = [
-                        F('song__release_date'), Upper('song__title')
+                        F('release_date'), Upper('song__title')
                     ]
             else:
                 order_fields = [Upper('song__title')]

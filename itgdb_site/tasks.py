@@ -166,6 +166,7 @@ def process_pack_upload(pack_data, filename):
                         chart_name = chart.get('CHARTNAME'),
                         chart_hash = chart_hash,
                         density_graph = get_density_graph(sim, chart),
+                        release_date = p.release_date,
                         **counts
                     )
     finally:

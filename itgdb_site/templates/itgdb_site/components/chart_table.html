@@ -47,8 +47,8 @@ Requires tables.css to be loaded.
             <i class="bi-calendar3 has-tooltip" data-bs-title="Release date">
             </i>&nbsp;
           </span>
-          {% if chart.song.release_date %}
-            {{ chart.song.release_date|date:'M j, Y' }}
+          {% if chart.release_date %}
+            {{ chart.release_date|date:'M j, Y' }}
           {% else %}
             <span class="fst-italic text-muted">Unknown</span>
           {% endif %}
