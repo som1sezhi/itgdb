@@ -147,7 +147,7 @@ def process_pack_upload(pack_data, filename):
                     release_date = p.release_date,
                     simfile = File(f, name=f'{sim_uuid}_{sim_filename}'),
                     banner = get_image(assets.banner, p, image_cache, True),
-                    bg = get_image(assets.background, p, image_cache),
+                    bg = get_image(assets.background, p, image_cache, True),
                     cdtitle = get_image(assets.cdtitle, p, image_cache),
                     jacket = get_image(assets.jacket, p, image_cache),
                 )

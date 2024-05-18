@@ -1,5 +1,6 @@
 {% extends 'itgdb_site/base.html' %}
 {% load static %}
+{% load thumbnail %}
 
 {% block title %}{{ pack.name }}{% endblock %}
 
@@ -9,7 +10,11 @@
 {% endblock %}
 
 {% block body_extra %}
-{% include 'itgdb_site/components/blurred_bg.html' with bg_url=pack.banner.image.url %}
+{% if pack.banner %}
+  {% thumbnail pack.banner.image "x50" as im %}
+    {% include 'itgdb_site/components/blurred_bg.html' with bg_url=im.url %}
+  {% endthumbnail %}
+{% endif %}
 {% endblock %}
 
 {% block content %}

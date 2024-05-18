@@ -142,6 +142,14 @@ class SongDetailView(generic.DetailView):
         ctx['links'] = _create_links_iterable(self.object.links)
         ctx['charts'] = list(zip(charts, ctx['density_data']))
 
+        # for some reason, using firstof in the django template breaks things
+        # with sorl-thumbnail, so instead we decide which background image to
+        # use in here.
+        if self.object.bg:
+            ctx['bg_img'] = self.object.bg.image
+        elif self.object.banner:
+            ctx['bg_img'] = self.object.banner.image
+
         return ctx
 
 

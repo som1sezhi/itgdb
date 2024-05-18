@@ -2,6 +2,7 @@
 {% load static %}
 {% load itgdb_tags %}
 {% load mathfilters %}
+{% load thumbnail %}
 
 {% block title %}{{ song.title }} {{ song.subtitle }}{% endblock %}
 
@@ -10,8 +11,11 @@
 {% endblock %}
 
 {% block body_extra %}
-{% firstof song.bg.image.url song.banner.image.url as bg_url %}
-{% include 'itgdb_site/components/blurred_bg.html' %}
+{% if bg_img %}
+  {% thumbnail bg_img "x50" as im %}
+    {% include 'itgdb_site/components/blurred_bg.html' with bg_url=im.url %}
+  {% endthumbnail %}
+{% endif %}
 {% endblock %}
 
 {% block content %}
