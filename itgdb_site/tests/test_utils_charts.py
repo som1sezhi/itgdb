@@ -48,9 +48,9 @@ class GetCountsTestClass(TestCase):
         # notes (except for 'objects'/'fakes')
         sim, chart = _open_test_chart('GetCounts_test_unhittable_notes.ssc')
         expected = {
-            'objects': 19,
-            'steps': 7,
-            'combo': 7,
+            'objects': 26,
+            'steps': 11,
+            'combo': 11,
             'jumps': 0,
             'mines': 0,
             'hands': 0,
