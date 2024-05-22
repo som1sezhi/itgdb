@@ -2,9 +2,9 @@ import hashlib
 import re
 from math import isclose
 from fractions import Fraction
-from simfile.base import BaseChart, BaseSimfile
+from simfile.types import Chart, Simfile
 from simfile.notes import NoteData, NoteType
-from simfile.notes.group import group_notes, SameBeatNotes, OrphanedNotes
+from simfile.notes.group import group_notes, SameBeatNotes, OrphanedNotes, NoteWithTail
 from simfile.notes.count import *
 from simfile.timing import TimingData, BeatValues, Beat
 from simfile.timing.engine import TimingEngine
@@ -56,7 +56,7 @@ def _minimize_chart(chart_str):
     return '\n'.join(final_data)
 
 
-def get_hash(sim: BaseSimfile, chart: BaseChart) -> str:
+def get_hash(sim: Simfile, chart: Chart) -> str:
     """Get the Groovestats hash of a chart."""
     # TODO: is all this necessary?
     notedata = chart.notes
@@ -85,7 +85,7 @@ def _is_in_fake_segment(fake_segs, beat):
     )
 
 
-def _get_hittable_arrows(sim: BaseSimfile, chart: BaseChart) -> NoteData:
+def _get_hittable_arrows(sim: Simfile, chart: Chart) -> NoteData:
     notes = NoteData(chart)
     fake_segs = _get_fake_segments(sim, chart)
     engine = TimingEngine(TimingData(sim, chart))
@@ -106,7 +106,53 @@ def _get_hittable_arrows(sim: BaseSimfile, chart: BaseChart) -> NoteData:
     ), notes.columns)
 
 
-def get_counts(sim: BaseSimfile, chart: BaseChart) -> dict:
+def _count_hands(sim: Simfile, chart: Chart) -> int:
+    """Count hands according to StepMania's counting behavior."""
+    # currently, the simfile library's count_hands function does not count all
+    # hands in cases where notes happen during holds/rolls, so we roll our
+    # own function instead
+    notes = NoteData(chart)
+    grouped_notes = group_notes(
+        notes,
+        include_note_types=frozenset((
+            NoteType.TAP,
+            NoteType.HOLD_HEAD,
+            NoteType.ROLL_HEAD,
+            NoteType.LIFT,
+            NoteType.TAIL
+        )),
+        join_heads_to_tails=True,
+        same_beat_notes=SameBeatNotes.JOIN_ALL
+    )
+    fake_segs = _get_fake_segments(sim, chart)
+    engine = TimingEngine(TimingData(sim, chart))
+
+    tail_beats = [None] * notes.columns
+    hands_count = 0
+    for group in grouped_notes:
+        cur_beat = group[0].beat
+        # clear tails that have passed
+        for i, tail_beat in enumerate(tail_beats):
+            if tail_beat and tail_beat < cur_beat:
+                tail_beats[i] = None
+        # skip if notes are unhittable on this beat
+        if not engine.hittable(cur_beat) or \
+            _is_in_fake_segment(fake_segs, cur_beat):
+            continue
+        # detect and count hands
+        active_holds_count = sum(t is not None for t in tail_beats)
+        cur_row_note_count = len(group)
+        if active_holds_count + cur_row_note_count > 2:
+            hands_count += 1
+        # add new tails for holds/rolls that start on this beat
+        for note in group:
+            if isinstance(note, NoteWithTail):
+                tail_beats[note.column] = note.tail_beat
+    
+    return hands_count
+
+
+def get_counts(sim: Simfile, chart: Chart) -> dict:
     """Get notecount statistics for a chart."""
     notes = NoteData(chart)
     hittables = _get_hittable_arrows(sim, chart)
@@ -129,7 +175,7 @@ def get_counts(sim: BaseSimfile, chart: BaseChart) -> dict:
         ),
         'jumps': count_jumps(hittables),
         'mines': count_mines(hittables),
-        'hands': count_hands(hittables),
+        'hands': _count_hands(sim, chart),
         'holds': count_holds(
             hittables, orphaned_tail=OrphanedNotes.DROP_ORPHAN
         ),
@@ -149,7 +195,7 @@ def get_counts(sim: BaseSimfile, chart: BaseChart) -> dict:
     }
 
 
-def get_density_graph(sim: BaseSimfile, chart: BaseChart) -> list:
+def get_density_graph(sim: Simfile, chart: Chart) -> list:
     hittables = _get_hittable_arrows(sim, chart)
     grouped_notes = group_notes(
         hittables,
