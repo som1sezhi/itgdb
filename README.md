@@ -1,23 +1,5 @@
-Start up Redis server:
+# ITGDb
 
-```shell
-redis-server --port 6380
-```
+A database website for ITG-style simfiles.
 
-Start up Celery worker:
-
-```shell
-python -m celery -A itgdb worker -l info
-```
-
-Start Localstack:
-```shell
-localstack start -d
-```
-
-Create bucket:
-```shell
-awslocal s3api create-bucket --bucket itgdbtest
-```
-
-In VS Code, when changing .env, make sure to restart the terminal before running docker-compose.
+Read the [dev docs](docs/dev_docs.md) for setup instructions.
