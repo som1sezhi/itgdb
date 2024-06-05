@@ -1,13 +1,24 @@
+"""Helper functions for analyzing charts and determining chart information
+using the `simfile` library.
+"""
+
 import hashlib
 import re
+import os
 from math import isclose
 from fractions import Fraction
 from simfile.types import Chart, Simfile
+from simfile.dir import SimfileDirectory, SimfilePack
 from simfile.notes import NoteData, NoteType
 from simfile.notes.group import group_notes, SameBeatNotes, OrphanedNotes, NoteWithTail
 from simfile.notes.count import *
 from simfile.timing import TimingData, BeatValues, Beat
 from simfile.timing.engine import TimingEngine
+from PIL import Image
+
+
+IMAGE_EXTS = ('.png', '.jpg', '.jpeg', '.gif', '.bmp')
+SOUND_EXTS = ('.mp3', '.oga', '.ogg', '.wav')
 
 
 def _normalize_decimal(decimal):
@@ -293,3 +304,147 @@ def get_density_graph(sim: Simfile, chart: Chart) -> list:
         append_point(last_t, 0)
     
     return nps_data
+
+
+def _get_full_validated_asset_path(sim_dir_path: str, path: str):
+    if not path:
+        return None
+    full_path = os.path.normpath(os.path.join(sim_dir_path, path))
+    pack_path = os.path.dirname(sim_dir_path)
+    # ensure path does not point outside the pack
+    if full_path.startswith(pack_path):
+        # ensure file exists
+        if os.path.isfile(full_path):
+            return full_path
+    return None
+
+
+ASSET_FILENAME_PATTERNS = {
+    'BANNER': re.compile('banner| bn$'),
+    'BACKGROUND': re.compile('background|bg$'),
+    'CDTITLE': re.compile('cdtitle'),
+    'JACKET': re.compile('^jk_|jacket|albumart'),
+    'CDIMAGE': re.compile('-cd$'),
+    'DISC': re.compile(' disc$| title$')
+}
+
+def get_assets(simfile_dir: SimfileDirectory) -> dict:
+    """Get a dict of absolute paths to various asset files for a simfile.
+    If the asset doesn't exist, its value is None.
+
+    dictionary keys:
+    'MUSIC', 'BANNER', 'BACKGROUND', 'CDTITLE', 'JACKET', 'CDIMAGE', 'DISC'
+    """
+    # NOTE: currently, simfile.assets can fail to find assets in cases where
+    # there are no filename hints. to remedy this, we reproduce stepmania's
+    # algorithm here.
+    # see TidyUpData() in Song.cpp in the stepmania source code for the
+    # original algorithm
+
+    sim = simfile_dir.open()
+    sim_dir_path = os.path.normpath(simfile_dir.simfile_dir)
+
+    # first, try to populate fields using the simfile's fields
+    assets = {
+        prop: _get_full_validated_asset_path(sim_dir_path, sim.get(prop))
+        for prop in (
+            'MUSIC', 'BANNER', 'BACKGROUND',
+            'CDTITLE', 'JACKET', 'CDIMAGE', 'DISC'
+        )
+    }
+
+    # stepmania represents directories as what is essentially an
+    # std::set<File>, where File::operator<() compares by lowercased filename.
+    # Thus, stepmania fetches files by (lowercase) alphabetical filename order.
+    file_list = sorted(os.listdir(sim_dir_path), key=str.lower)
+    # ignore filenames starting with "._" (macOS stuff)
+    file_list = list(filter(
+        lambda fname: not fname.startswith('._'),
+        file_list
+    ))
+
+    image_list = list(filter(
+        lambda fname: any(fname.lower().endswith(ext) for ext in IMAGE_EXTS),
+        file_list
+    ))
+    
+    # if music isn't found yet, use the first file with an audio extension
+    if not assets['MUSIC']:
+        for fname in file_list:
+            if any(fname.lower().endswith(ext) for ext in SOUND_EXTS):
+                assets['MUSIC'] = os.path.join(sim_dir_path, fname)
+                break
+    
+    # for image assets that aren't found yet, check if filename matches the
+    # appropriate asset pattern, and use it if so.
+    used_images = set()
+    for prop in assets:
+        if prop == 'MUSIC' or assets[prop]:
+            continue
+        pattern = ASSET_FILENAME_PATTERNS[prop]
+        for fname in image_list:
+            base_fname_lower = fname.rsplit('.', 1)[0].lower()
+            if re.search(pattern, base_fname_lower):
+                assets[prop] = os.path.join(sim_dir_path, fname)
+                used_images.add(fname)
+                break
+    
+    # if assets still aren't found yet, look at the image dimensions
+    # of the remaining images.
+    for fname in image_list:
+        # exit loop if "done"
+        if assets['BANNER'] and assets['BACKGROUND'] and assets['CDTITLE']:
+            break
+        # don't consider images that are already used
+        if fname in used_images:
+            continue
+
+        full_path = os.path.join(sim_dir_path, fname)
+        try:
+            image = Image.open(full_path)
+        except:
+            continue # could not open image, skip
+        w, h = image.size
+
+        if not assets['BACKGROUND'] and w >= 320 and h >= 240:
+            assets['BACKGROUND'] = full_path
+
+        elif not assets['BANNER'] and 100 <= w <= 320 and 50 <= h <= 240:
+            assets['BANNER'] = full_path
+
+        elif not assets['BANNER'] and w > 200 and w / h > 2:
+            assets['BANNER'] = full_path
+
+        elif not assets['CDTITLE'] and w <= 100 and h <= 48:
+            assets['CDTITLE'] = full_path
+
+        elif not assets['JACKET'] and w == h:
+            assets['JACKET'] = full_path
+
+        elif not assets['DISC'] and w > h and assets['BANNER']:
+            # this condition is separated out to match the logic of the
+            # original stepmania code as close as possible
+            if assets['BANNER'] != full_path:
+                assets['DISC'] = full_path
+
+        elif not assets['CDIMAGE'] and w == h:
+            assets['CDIMAGE'] = full_path
+    
+    return assets
+
+
+def get_pack_banner_path(pack_path: str, simfile_pack: SimfilePack):
+    # NOTE: currently the simfile library (2.1.1) doesn't reproduce the exact 
+    # behavior of stepmania when looking for pack banners, so we write our
+    # own function.
+    # as in get_assets(), stepmania draws potential pack banner files from
+    # a std::set<File> which is sorted by (lowercase) alphabet order,
+    # so here we sort the directory listing before iterating through.
+    for image_type in IMAGE_EXTS:
+        for item in sorted(os.listdir(pack_path), key=str.lower):
+            if item.lower().endswith(image_type):
+                return os.path.join(pack_path, item)
+
+    # let's just use simfile's implementation for the case where
+    # the banner is outside the pack directory
+    return simfile_pack.banner()

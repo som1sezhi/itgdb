@@ -16,28 +16,11 @@ import cv2
 from sorl.thumbnail import get_thumbnail
 
 from .models import Pack, Song, Chart, ImageFile
-from .utils.charts import get_hash, get_counts, get_density_graph
+from .utils.charts import (
+    get_hash, get_counts, get_density_graph, get_assets, get_pack_banner_path
+)
 
 logger = get_task_logger(__name__)
-
-
-def get_pack_banner_path(pack_path, simfile_pack):
-    # NOTE: currently the simfile library (2.1.1) doesn't reproduce the exact 
-    # behavior of stepmania when looking for pack banners.
-    # my c++ knowledge is lacking, but from looking at the stepmania source,
-    # i think it draws from a c++ set when iterating through directory items,
-    # which are always sorted alphabetically. my tests so far seem to
-    # match this behavior. thus it seems we need to sort the list of items
-    # looking through them.
-    IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".bmp")
-    for image_type in IMAGE_EXTS:
-        for item in sorted(os.listdir(pack_path), key=str.casefold):
-            if item.lower().endswith(image_type):
-                return os.path.join(pack_path, item)
-
-    # let's just use simfile's implementation for the case where
-    # the banner is outside the pack directory
-    return simfile_pack.banner()
 
 
 def get_image(path, pack, cache, generate_thumbnail=False):
@@ -114,13 +97,13 @@ def process_pack_upload(pack_data, filename):
 
             for simfile_dir in simfile_pack.simfile_dirs():
                 sim = simfile_dir.open()
-                assets = simfile_dir.assets()
+                assets = get_assets(simfile_dir)
                 sim_path = simfile_dir.simfile_path
                 sim_filename = os.path.basename(sim_path)
 
                 logger.info(f'Processing {p.name}/{sim.title}')
 
-                music_path = assets.music
+                music_path = assets['MUSIC']
                 audio = mutagen.File(music_path)
 
                 bpm = displaybpm(sim, ignore_specified=True)
@@ -146,10 +129,10 @@ def process_pack_upload(pack_data, filename):
                     length = audio.info.length,
                     release_date = p.release_date,
                     simfile = File(f, name=f'{sim_uuid}_{sim_filename}'),
-                    banner = get_image(assets.banner, p, image_cache, True),
-                    bg = get_image(assets.background, p, image_cache, True),
-                    cdtitle = get_image(assets.cdtitle, p, image_cache),
-                    jacket = get_image(assets.jacket, p, image_cache),
+                    banner = get_image(assets['BANNER'], p, image_cache, True),
+                    bg = get_image(assets['BACKGROUND'], p, image_cache, True),
+                    cdtitle = get_image(assets['CDTITLE'], p, image_cache),
+                    jacket = get_image(assets['JACKET'], p, image_cache),
                 )
                 f.close()
 
