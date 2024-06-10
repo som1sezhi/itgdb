@@ -23,6 +23,11 @@ def _open_test_simfile_dir(name: str) -> SimfileDirectory:
 
 
 class GetCountsTestClass(SimpleTestCase):
+    def _do_test(self, test_name, expected):
+        sim, chart = _open_test_chart(f'GetCounts_{test_name}.ssc')
+        actual = get_counts(sim, chart)
+        self.assertEqual(expected, actual)
+
     def test_counts(self):
         # desired behaviors:
         # - any simultaneous note chord is a step/jump/hand
@@ -32,61 +37,63 @@ class GetCountsTestClass(SimpleTestCase):
         # - simultaneous holds/rolls are counted separately
         # - mines/lifts/fakes are counted separately
         # - fakes are not included in any counts besides the fakes count
-        sim, chart = _open_test_chart('GetCounts_test_counts.ssc')
-        expected = {
-            'objects': 84,
-            'steps': 45,
-            'combo': 73,
-            'jumps': 22,
-            'mines': 8,
-            'hands': 13,
-            'holds': 14,
-            'rolls': 10,
-            'lifts': 7,
-            'fakes': 3
-        }
-        actual = get_counts(sim, chart)
-        self.assertEqual(expected, actual)
+        self._do_test(
+            'test_counts',
+            {
+                'objects': 84,
+                'steps': 45,
+                'combo': 73,
+                'jumps': 22,
+                'mines': 8,
+                'hands': 13,
+                'holds': 14,
+                'rolls': 10,
+                'lifts': 7,
+                'fakes': 3
+            }
+        )
     
     def test_unhittable_notes(self):
         # test that fake regions and warps are skipped over when counting
         # notes (except for 'objects'/'fakes')
-        sim, chart = _open_test_chart('GetCounts_test_unhittable_notes.ssc')
+        self._do_test(
+            'test_unhittable_notes',
+            {
+                'objects': 26,
+                'steps': 11,
+                'combo': 11,
+                'jumps': 0,
+                'mines': 0,
+                'hands': 0,
+                'holds': 4,
+                'rolls': 2,
+                'lifts': 0,
+                'fakes': 2
+            }
+        )
+
+
+class GetAssetsTestClass(SimpleTestCase):    
+    def _do_test(self, test_name, expected):
+        test_dir_name = 'GetAssets_' + test_name
+        sim_dir = _open_test_simfile_dir(test_dir_name)
+        actual = get_assets(sim_dir)
+
+        # convert expected dict values from relative to absolute paths
         expected = {
-            'objects': 26,
-            'steps': 11,
-            'combo': 11,
-            'jumps': 0,
-            'mines': 0,
-            'hands': 0,
-            'holds': 4,
-            'rolls': 2,
-            'lifts': 0,
-            'fakes': 2
-        }
-        actual = get_counts(sim, chart)
-        self.assertEqual(expected, actual)
-
-
-class GetAssetsTestClass(SimpleTestCase):
-    @staticmethod
-    def _convert_assets_dict_to_abs_path(test_dir_name, assets):
-        return {
             prop: os.path.join(
                 TEST_BASE_DIR, 'simfile_dirs', test_dir_name, filename
             ) if filename else filename
-            for prop, filename in assets.items()
+            for prop, filename in expected.items()
         }
+        self.assertEqual(expected, actual)
 
     def test_find_via_simfile(self):
         # test that assets are found when specified in the simfile
         # - video files are supported if specified explicitly
         # - files in subdirectories are supported
-        test_dir_name = 'GetAssets_test_find_via_simfile'
-        sim_dir = _open_test_simfile_dir(test_dir_name)
-        actual = get_assets(sim_dir)
-        expected = GetAssetsTestClass._convert_assets_dict_to_abs_path(
-            test_dir_name,
+        self._do_test(
+            'test_find_via_simfile',
             {
                 'MUSIC': 'click.ogg',
                 'BANNER': 'image1.avi',
@@ -97,15 +104,11 @@ class GetAssetsTestClass(SimpleTestCase):
                 'DISC': None
             }
         )
-        self.assertEqual(expected, actual)
 
     def test_find_via_filename_hints(self):
         # test that assets can be found via filename hints
-        test_dir_name = 'GetAssets_test_find_via_filename_hints'
-        sim_dir = _open_test_simfile_dir(test_dir_name)
-        actual = get_assets(sim_dir)
-        expected = GetAssetsTestClass._convert_assets_dict_to_abs_path(
-            test_dir_name,
+        self._do_test(
+            'test_find_via_filename_hints',
             {
                 'MUSIC': 'click.ogg',
                 'BANNER': 'click bn.png',
@@ -116,15 +119,11 @@ class GetAssetsTestClass(SimpleTestCase):
                 'DISC': None
             }
         )
-        self.assertEqual(expected, actual)
 
     def test_find_via_image_sizes(self):
         # test that assets can be found via image dimensions
-        test_dir_name = 'GetAssets_test_find_via_image_sizes'
-        sim_dir = _open_test_simfile_dir(test_dir_name)
-        actual = get_assets(sim_dir)
-        expected = GetAssetsTestClass._convert_assets_dict_to_abs_path(
-            test_dir_name,
+        self._do_test(
+            'test_find_via_image_sizes',
             {
                 'MUSIC': 'click.ogg',
                 'BANNER': 'image0.png',
@@ -135,23 +134,19 @@ class GetAssetsTestClass(SimpleTestCase):
                 'DISC': None
             }
         )
-        self.assertEqual(expected, actual)
 
     def test_find_via_multiple_methods(self):
         # test how different asset-finding methods interact:
-        # - if a file is found via simfile specification, it can still found
-        #   later on by other methods for other properties
+        # - if a file is found via simfile specification, it can still be
+        #   reused later on by other methods for other properties
         # - if a file is found via filename hints, it cannot be reused later
         #   on when finding via image sizes
-        #
+        # in this test:
         # - banner is found via filename hints
         # - background is found via simfile specification
         # - cdtitle is found via image size hints
-        test_dir_name = 'GetAssets_test_find_via_multiple_methods'
-        sim_dir = _open_test_simfile_dir(test_dir_name)
-        actual = get_assets(sim_dir)
-        expected = GetAssetsTestClass._convert_assets_dict_to_abs_path(
-            test_dir_name,
+        self._do_test(
+            'test_find_via_multiple_methods',
             {
                 'MUSIC': 'click.ogg',
                 'BANNER': 'img1 bkgd and bn.png',
@@ -162,7 +157,6 @@ class GetAssetsTestClass(SimpleTestCase):
                 'DISC': None
             }
         )
-        self.assertEqual(expected, actual)
 
     def test_find_fail(self):
         # test that various failure cases are handled:
@@ -173,11 +167,8 @@ class GetAssetsTestClass(SimpleTestCase):
         #   other methods (bg, cdtitle)
         # - malformed files with the right extension are still found and
         #   accepted (bg)
-        test_dir_name = 'GetAssets_test_find_fail'
-        sim_dir = _open_test_simfile_dir(test_dir_name)
-        actual = get_assets(sim_dir)
-        expected = GetAssetsTestClass._convert_assets_dict_to_abs_path(
-            test_dir_name,
+        self._do_test(
+            'test_find_fail',
             {
                 'MUSIC': 'click.ogg',
                 'BANNER': None,
@@ -188,7 +179,6 @@ class GetAssetsTestClass(SimpleTestCase):
                 'DISC': None
             }
         )
-        self.assertEqual(expected, actual)
 
 
 class GetSongLengthsTestClass(SimpleTestCase):
