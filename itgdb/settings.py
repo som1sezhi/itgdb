@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import sys
 import os
 from pathlib import Path
 import logging.config
@@ -50,7 +51,6 @@ INSTALLED_APPS = [
     'django.contrib.postgres',
     'admin_extra_buttons',
     'django_celery_results',
-    'debug_toolbar',
     'itgdb_site',
     'storages',
     'mathfilters',
@@ -61,9 +61,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    # place as early as possible, but before any response-encoding middleware
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
-
     'django.middleware.security.SecurityMiddleware',
 
     # place after SecurityMiddleware, before all other middleware
@@ -222,6 +219,21 @@ THUMBNAIL_STORAGE = 'itgdb_site.storage_backends.ThumbnailStorage'
 # django-crispy-forms settings
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
+
+# only enable debug toolbar when not running tests
+# https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#disable-the-toolbar-when-running-tests-optional
+TESTING = "test" in sys.argv
+if not TESTING:
+    INSTALLED_APPS = [
+        *INSTALLED_APPS,
+        "debug_toolbar",
+    ]
+    MIDDLEWARE = [
+        # insert as early as possible, but before
+        # any response-encoding middleware
+        "debug_toolbar.middleware.DebugToolbarMiddleware",
+        *MIDDLEWARE,
+    ]
 
 # Logging Configuration
 # https://www.digitalocean.com/community/tutorials/how-to-build-a-django-and-gunicorn-application-with-docker

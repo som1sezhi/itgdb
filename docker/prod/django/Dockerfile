@@ -38,6 +38,8 @@ RUN apt-get update \
     gettext \
     # for testing
     iputils-ping \
+    # for opening music files
+    ffmpeg \
     # cleaning up unused files
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*

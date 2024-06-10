@@ -2,10 +2,12 @@
 using the `simfile` library.
 """
 
+from typing import Tuple, Dict
 import hashlib
 import re
 import os
 from math import isclose
+import subprocess
 from fractions import Fraction
 from simfile.types import Chart, Simfile
 from simfile.dir import SimfileDirectory, SimfilePack
@@ -206,7 +208,7 @@ def get_counts(sim: Simfile, chart: Chart) -> dict:
     }
 
 
-def get_density_graph(sim: Simfile, chart: Chart) -> list:
+def get_density_graph(sim: Simfile, chart: Chart, chart_len: float) -> list:
     hittables = _get_hittable_arrows(sim, chart)
     grouped_notes = group_notes(
         hittables,
@@ -289,19 +291,8 @@ def get_density_graph(sim: Simfile, chart: Chart) -> list:
     append_point(time, 0)
 
     # add 0 nps point at *very* end of song:
-    # find last note in chart
-    last = None
-    for last in NoteData(chart):
-        pass
-    if last:
-        last_t = engine.time_at(last.beat)
-    else:
-        last_t = 0
-    # get lastsecondhint
-    last_sec_hint = float(sim.get('LASTSECONDHINT', '0'))
-    last_t = max(last_t, last_sec_hint)
-    if last_t > nps_data[-1][0] + 0.1:
-        append_point(last_t, 0)
+    if chart_len > nps_data[-1][0] + 0.1:
+        append_point(chart_len, 0)
     
     return nps_data
 
@@ -328,7 +319,7 @@ ASSET_FILENAME_PATTERNS = {
     'DISC': re.compile(' disc$| title$')
 }
 
-def get_assets(simfile_dir: SimfileDirectory) -> dict:
+def get_assets(simfile_dir: SimfileDirectory) -> Dict[str, str | None]:
     """Get a dict of absolute paths to various asset files for a simfile.
     If the asset doesn't exist, its value is None.
 
@@ -433,7 +424,7 @@ def get_assets(simfile_dir: SimfileDirectory) -> dict:
     return assets
 
 
-def get_pack_banner_path(pack_path: str, simfile_pack: SimfilePack):
+def get_pack_banner_path(pack_path: str, simfile_pack: SimfilePack) -> str | None:
     # NOTE: currently the simfile library (2.1.1) doesn't reproduce the exact 
     # behavior of stepmania when looking for pack banners, so we write our
     # own function.
@@ -448,3 +439,57 @@ def get_pack_banner_path(pack_path: str, simfile_pack: SimfilePack):
     # let's just use simfile's implementation for the case where
     # the banner is outside the pack directory
     return simfile_pack.banner()
+
+
+def get_song_lengths(music_path: str, sim: Simfile) -> Tuple[float, float] | None:
+    """Return two floats:
+    - the music length (as displayed on the songwheel in StepMania)
+    - the time when the song's charts ends (the rightmost bound of density 
+      graphs). This is the maximum of:
+        - the LASTSECONDHINT value
+        - the time of the last note in any chart in the simfile (edit charts
+          are ignored unless the only chart is a single edit chart)
+    If the music file could not be opened, None is returned.
+    """
+    # fetch music file duration using ffprobe
+    completed_process = subprocess.run([
+        'ffprobe', '-i', music_path, '-show_entries', 'format=duration',
+        '-v', 'quiet', '-of', 'csv=p=0'
+    ], capture_output=True, encoding='utf-8')
+    # check for failure
+    if completed_process.returncode != 0:
+        return None
+
+    music_len = float(completed_process.stdout)
+
+    # init charts' end as the LASTSECONDHINT value
+    chart_end = float(sim.get('LASTSECONDHINT', '0'))
+    
+    for chart in sim.charts:
+        # NOTE: it is intended behavior for the chart length to be affected
+        # by charts with stepstype that are not 4/8-panel-based (e.g. pump)
+        # -- see the test_longer_chart test case.
+        # TODO: ignore lights chart?
+        # see Song::ReCalculateRadarValuesAndLastSecond() in SM source code
+
+        # ignore edit charts (unless it is the only chart)
+        # NOTE: SM doesn't like it if the simfile consists entirely of 2+ edit
+        # charts (the chart ends basically immediately). I think leaving
+        # chart_end at 0 is acceptable behavior in this case.
+        if chart.difficulty.lower() == 'edit' and len(sim.charts) > 1:
+            continue
+
+        notes = NoteData(chart)
+        # get the last note by exhausting the iterator
+        last_note = None
+        for last_note in notes:
+            pass
+
+        if last_note:
+            engine = TimingEngine(TimingData(sim, chart))
+            last_note_time = engine.time_at(last_note.beat)
+            chart_end = max(chart_end, last_note_time)
+    
+    return max(music_len, chart_end), chart_end
+
+

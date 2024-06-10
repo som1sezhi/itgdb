@@ -1,11 +1,11 @@
 from typing import Tuple
 import os
-from django.test import TestCase
+from django.test import SimpleTestCase
 import simfile
 from simfile.types import Simfile, Chart
 from simfile.dir import SimfileDirectory
 
-from ..utils.charts import get_counts, get_assets
+from ..utils.charts import get_counts, get_assets, get_song_lengths
 
 TEST_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -22,7 +22,7 @@ def _open_test_simfile_dir(name: str) -> SimfileDirectory:
     return SimfileDirectory(path)
 
 
-class GetCountsTestClass(TestCase):
+class GetCountsTestClass(SimpleTestCase):
     def test_counts(self):
         # desired behaviors:
         # - any simultaneous note chord is a step/jump/hand
@@ -68,7 +68,7 @@ class GetCountsTestClass(TestCase):
         self.assertEqual(expected, actual)
 
 
-class GetAssetsTestClass(TestCase):
+class GetAssetsTestClass(SimpleTestCase):
     @staticmethod
     def _convert_assets_dict_to_abs_path(test_dir_name, assets):
         return {
@@ -189,3 +189,41 @@ class GetAssetsTestClass(TestCase):
             }
         )
         self.assertEqual(expected, actual)
+
+
+class GetSongLengthsTestClass(SimpleTestCase):
+    def _do_test(self, test_name, expected):
+        test_dir_path = os.path.join(
+            TEST_BASE_DIR, 'simfile_dirs', 'GetSongLengths_' + test_name
+        )
+        music_path = os.path.join(test_dir_path, 'click16.ogg')
+        sim_path = os.path.join(test_dir_path, 'click16.ssc')
+        sim = simfile.open(sim_path)
+        actual = get_song_lengths(music_path, sim)
+        self.assertEqual(expected, actual)
+
+    def test_longer_song(self):
+        # test that the correct values are returned when the song is longer
+        # than the chart
+        self._do_test('test_longer_song', (8, 4))
+    
+    def test_longer_chart(self):
+        # test that the correct values are returned when a non-edit chart is
+        # longer than the song (even if the chart's playstyle is not ITG-based)
+        self._do_test('test_longer_chart', (30, 30))
+    
+    def test_only_edit(self):
+        # test that the correct values are returned when an edit chart is
+        # longer than the song and the edit chart is the only chart in the
+        # simfile
+        self._do_test('test_only_edit', (38, 38))
+    
+    def test_lastsecondhint(self):
+        # test that the correct values are returned when the song length is
+        # determined by LASTSECONDHINT
+        self._do_test('test_lastsecondhint', (100, 100))
+    
+    def test_fail(self):
+        # test that the function returns None if the music file cannot be
+        # opened
+        self._do_test('test_fail', None)

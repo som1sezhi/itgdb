@@ -3,13 +3,13 @@ import os
 import shutil
 import uuid
 import zipfile
+from subprocess import CalledProcessError
 from django.conf import settings
 from django.core.files import File
 from django.core.files.storage import default_storage
 from django.db import transaction
 from simfile.dir import SimfilePack
 from simfile.timing.displaybpm import displaybpm
-import mutagen
 from celery import shared_task
 from celery.utils.log import get_task_logger
 import cv2
@@ -17,7 +17,8 @@ from sorl.thumbnail import get_thumbnail
 
 from .models import Pack, Song, Chart, ImageFile
 from .utils.charts import (
-    get_hash, get_counts, get_density_graph, get_assets, get_pack_banner_path
+    get_hash, get_counts, get_density_graph, get_assets, get_pack_banner_path,
+    get_song_lengths
 )
 
 logger = get_task_logger(__name__)
@@ -104,7 +105,12 @@ def process_pack_upload(pack_data, filename):
                 logger.info(f'Processing {p.name}/{sim.title}')
 
                 music_path = assets['MUSIC']
-                audio = mutagen.File(music_path)
+                if not music_path:
+                    continue
+                song_lengths = get_song_lengths(music_path, sim)
+                if not song_lengths:
+                    continue
+                music_len, chart_len = song_lengths
 
                 bpm = displaybpm(sim, ignore_specified=True)
                 disp = displaybpm(sim)
@@ -126,7 +132,7 @@ def process_pack_upload(pack_data, filename):
                     max_bpm = bpm_range[1],
                     min_display_bpm = disp_range[0],
                     max_display_bpm = disp_range[1],
-                    length = audio.info.length,
+                    length = music_len,
                     release_date = p.release_date,
                     simfile = File(f, name=f'{sim_uuid}_{sim_filename}'),
                     banner = get_image(assets['BANNER'], p, image_cache, True),
@@ -148,7 +154,7 @@ def process_pack_upload(pack_data, filename):
                         description = chart.description,
                         chart_name = chart.get('CHARTNAME'),
                         chart_hash = chart_hash,
-                        density_graph = get_density_graph(sim, chart),
+                        density_graph = get_density_graph(sim, chart, chart_len),
                         release_date = p.release_date,
                         **counts
                     )
