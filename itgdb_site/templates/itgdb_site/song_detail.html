@@ -76,6 +76,21 @@
         <td>{{ song.credit }}</td>
       </tr>
       {% endif %}
+      {% if graphics_links %}
+      <tr>
+        <th scope="row">Graphics</th>
+        <td>
+        {% for link_label, link_url in graphics_links %}
+          <a href="{{ link_url }}">
+              {{ link_label }}
+          </a>
+          {% if not forloop.last %}
+            &#x2022;
+          {% endif %}
+        {% endfor %}
+        </td>
+      </tr>
+      {% endif %}
     </table>
     
     {% if song.has_bgchanges %}

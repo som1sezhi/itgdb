@@ -150,6 +150,17 @@ class SongDetailView(generic.DetailView):
         elif self.object.banner:
             ctx['bg_img'] = self.object.banner.image
 
+        graphics_links = []
+        if self.object.banner:
+            graphics_links.append(('Banner', self.object.banner.image.url))
+        if self.object.bg:
+            graphics_links.append(('BG', self.object.bg.image.url))
+        if self.object.cdtitle:
+            graphics_links.append(('CDTitle', self.object.cdtitle.image.url))
+        if self.object.jacket:
+            graphics_links.append(('Jacket', self.object.jacket.image.url))
+        ctx['graphics_links'] = graphics_links
+
         return ctx
 
 
