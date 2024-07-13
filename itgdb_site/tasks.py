@@ -143,13 +143,33 @@ def process_pack_upload(pack_data, filename):
                 f.close()
 
                 for chart in sim.charts:
+                    steps_type = Chart.steps_type_to_int(chart.stepstype)
+                    if steps_type is None:
+                        # ignore charts with unsupported stepstype
+                        continue
+                    difficulty = Chart.difficulty_str_to_int(chart.difficulty)
+                    if difficulty is None:
+                        # TODO: investigate what the best way to handle this
+                        # should be (for now, just put it as an edit; i hope
+                        # this is rare enough where this shouldn't be too much
+                        # of an issue).
+                        # NOTE: ITGmania + Simply Love seems to like putting 
+                        # charts with invalid difficulty in the Novice slot.
+                        difficulty = 5
+                    try:
+                        meter = int(chart.meter)
+                    except ValueError:
+                        # apparently it's possible for the meter to not be a
+                        # number -- use -1 as a placeholder/fallback
+                        meter = -1
                     chart_hash = get_hash(sim, chart)
                     counts = get_counts(sim, chart)
                     counts = {k + '_count': v for k, v in counts.items()}
+                    
                     s.chart_set.create(
-                        steps_type = Chart.steps_type_to_int(chart.stepstype),
-                        difficulty = Chart.difficulty_str_to_int(chart.difficulty),
-                        meter = int(chart.meter),
+                        steps_type = steps_type,
+                        difficulty = difficulty,
+                        meter = meter,
                         credit = chart.get('CREDIT'),
                         description = chart.description,
                         chart_name = chart.get('CHARTNAME'),

@@ -132,7 +132,6 @@ class Chart(models.Model):
     STEPS_TYPE_MAPPING = {v: k for k, v in STEPS_TYPE_CHOICES.items()}
     DIFFICULTY_MAPPING = dict(
         **{v: k for k, v in DIFFICULTY_CHOICES.items()},
-        expert=4
     )
 
     song = models.ForeignKey(Song, on_delete=models.CASCADE)
@@ -165,12 +164,12 @@ class Chart(models.Model):
 
     @staticmethod
     def steps_type_to_int(steps_type: str):
-        return Chart.STEPS_TYPE_MAPPING[steps_type]
+        return Chart.STEPS_TYPE_MAPPING.get(steps_type)
 
     @staticmethod
     def difficulty_str_to_int(diff: str):
         diff = diff.lower()
-        return Chart.DIFFICULTY_MAPPING[diff]
+        return Chart.DIFFICULTY_MAPPING.get(diff)
     
     def __str__(self):
         return '[%s] %s %s (%s %s)' % (
