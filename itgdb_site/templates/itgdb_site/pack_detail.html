@@ -29,18 +29,38 @@
         {% endif %}
       </div>
       <div class="col-12 col-sm-6 col-md-12">
-        <p>
-        {% if pack.release_date %}
-          <span class="fw-bold">Release date:</span> {{ pack.release_date|date }}<br />
-        {% endif %}
-        {% if pack.category %}
-          <span class="fw-bold">Category:</span>
-          {% include 'itgdb_site/components/category_badge.html' with category=pack.category %}
-          {{ pack.category.name }}
-          <br />
-        {% endif %}
-          {{ songs.count }} songs, {{ chart_count }} charts<br />
-        </p>
+        <table class="table table-sm info-table">
+          {% if pack.author %}
+          <tr>
+            <th scope="row">Author(s)</th>
+            <td>{{ pack.author }}</td>
+          </tr>
+          {% endif %}
+          {% if pack.release_date %}
+          <tr>
+            <th scope="row">Release date</th>
+            <td>{{ pack.release_date|date }}</td>
+          </tr>
+          {% endif %}
+          {% if pack.category %}
+          <tr>
+            <th scope="row">Category</th>
+            <td>
+              {% include 'itgdb_site/components/category_badge.html' with category=pack.category %}
+              {{ pack.category.name }}
+            </td>
+          </tr>
+          {% endif %}
+          <tr>
+            <th scope="row">Songs</th>
+            <td>{{ songs.count }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Charts</th>
+            <td>{{ chart_count }}</td>
+          </tr>
+        </table>
+
         <p class="mb-1">
         {% for link_label, link_url in links %}
           <a href="{{ link_url }}" target="_blank" rel="noopener noreferrer">

@@ -14,8 +14,8 @@ Requires tables.css to be loaded.
       <tr class="lh-sm">
         <th scope="col" rowspan="2" class="bn-col"></th>
         <th scope="col" rowspan="2" class="text-start item-name-col">Pack name</th>
-        <th scope="col" rowspan="2">Release date</th>
-        <th scope="col" rowspan="2">Song count</th>
+        <th scope="col" rowspan="2" class="pack-author-col">Author(s)</th>
+        <th scope="col" rowspan="2" class="pack-info-col"></th>
         <th scope="col" colspan="6">Singles</th>
         <th scope="col" colspan="{% if show_double_nov %}6{% else %}5{% endif %}">Doubles</th>
       </tr>
@@ -52,15 +52,26 @@ Requires tables.css to be loaded.
         </td>
         
         <td>
-          {% if pack.release_date %}
-            {{ pack.release_date|date:'M j, Y' }}
+          {% if pack.author %}
+            {{ pack.author }}
           {% else %}
             <span class="fst-italic text-muted">Unknown</span>
           {% endif %}
         </td>
 
-        <td>
+        <td class="text-start small">
+          <span class="opacity-50">
+            <i class="bi-calendar3 has-tooltip" data-bs-title="Release date">
+            </i>&nbsp;
+          </span>
+          {% if pack.release_date %}
+            {{ pack.release_date|date:'M j, Y' }}
+          {% else %}
+            <span class="fst-italic text-muted">Unknown</span>
+          {% endif %}
+          <br />
           {{ pack.song_count }}
+          <span class="opacity-50">song{{ pack.song_count|pluralize }}</span>
         </td>
 
         {% for data in pack.diff_data %}

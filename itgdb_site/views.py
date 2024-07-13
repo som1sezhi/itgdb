@@ -156,7 +156,7 @@ class SongDetailView(generic.DetailView):
 class PackSearchView(generic.ListView):
     template_name = 'itgdb_site/pack_search.html'
     context_object_name = 'packs'
-    paginate_by = 2 # TODO: change to reasonable number after testing
+    paginate_by = 50 # TODO: change to reasonable number after testing
 
     def get_queryset(self):
         form = PackSearchForm(self.request.GET)

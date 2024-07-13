@@ -41,7 +41,9 @@ class PackCategory(models.Model):
 
 class Pack(models.Model):
     name = models.CharField(max_length=255, blank=True)
+    author = models.CharField(max_length=255, blank=True)
     release_date = models.DateTimeField(blank=True, null=True)
+    upload_date = models.DateTimeField(blank=True, null=True)
     category = models.ForeignKey(
         PackCategory, on_delete=models.SET_NULL, blank=True, null=True
     )
@@ -71,6 +73,7 @@ class Song(models.Model):
     max_display_bpm = models.FloatField(null=True, blank=True)
     length = models.FloatField()
     release_date = models.DateTimeField(null=True, blank=True)
+    upload_date = models.DateTimeField(null=True, blank=True)
     links = models.TextField(blank=True, default='')
     simfile = models.FileField(storage=get_simfiles_storage)
     banner = models.ForeignKey(
@@ -89,6 +92,9 @@ class Song(models.Model):
         ImageFile, on_delete=models.SET_NULL, related_name='jacket_songs',
         blank=True, null=True
     )
+    has_bgchanges = models.BooleanField(default=False)
+    has_fgchanges = models.BooleanField(default=False)
+    has_attacks = models.BooleanField(default=False)
 
     class Meta:
         constraints = [
@@ -140,12 +146,14 @@ class Chart(models.Model):
     steps_type = models.SmallIntegerField(choices=STEPS_TYPE_CHOICES)
     difficulty = models.SmallIntegerField(choices=DIFFICULTY_CHOICES)
     meter = models.IntegerField()
-    credit = models.CharField(max_length=255, null=True, blank=True)
-    description = models.CharField(max_length=255, null=True, blank=True)
-    chart_name = models.CharField(max_length=255, null=True, blank=True)
+    credit = models.CharField(max_length=255, blank=True, default='')
+    description = models.CharField(max_length=255, blank=True, default='')
+    chart_name = models.CharField(max_length=255, blank=True, default='')
     chart_hash = models.CharField(max_length=40)
     release_date = models.DateTimeField(null=True, blank=True)
+    upload_date = models.DateTimeField(null=True, blank=True)
     density_graph = models.JSONField()
+    has_attacks = models.BooleanField(default=False)
     objects_count = models.PositiveIntegerField()
     steps_count = models.PositiveIntegerField()
     combo_count = models.PositiveIntegerField()

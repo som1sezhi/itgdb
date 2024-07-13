@@ -20,7 +20,7 @@ class PackUploadForm(forms.ModelForm):
 
     class Meta:
         model = Pack
-        fields = ['name', 'release_date', 'category', 'tags', 'links']
+        fields = ['name', 'author', 'release_date', 'category', 'tags', 'links']
 
 
 class PackSearchForm(forms.Form):

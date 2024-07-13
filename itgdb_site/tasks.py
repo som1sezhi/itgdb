@@ -3,11 +3,11 @@ import os
 import shutil
 import uuid
 import zipfile
-from subprocess import CalledProcessError
 from django.conf import settings
 from django.core.files import File
 from django.core.files.storage import default_storage
 from django.db import transaction
+from django.utils import timezone
 from simfile.dir import SimfilePack
 from simfile.timing.displaybpm import displaybpm
 from celery import shared_task
@@ -80,13 +80,16 @@ def process_pack_upload(pack_data, filename):
         pack_name = next(os.walk(extract_path))[1][0]
         pack_path = os.path.join(extract_path, pack_name)
         image_cache = {}
+        now = timezone.now()
         # TODO: handle uploaded image/sim files better on rollback
         # https://github.com/un1t/django-cleanup/issues/43
         with transaction.atomic():
             simfile_pack = SimfilePack(pack_path)
             p = Pack(
                 name = pack_data['name'] or simfile_pack.name,
+                author = pack_data['author'],
                 release_date = pack_data['release_date'],
+                upload_date = now,
                 category_id = pack_data['category'],
                 links = pack_data['links']
             )
@@ -134,11 +137,15 @@ def process_pack_upload(pack_data, filename):
                     max_display_bpm = disp_range[1],
                     length = music_len,
                     release_date = p.release_date,
+                    upload_date = now,
                     simfile = File(f, name=f'{sim_uuid}_{sim_filename}'),
                     banner = get_image(assets['BANNER'], p, image_cache, True),
                     bg = get_image(assets['BACKGROUND'], p, image_cache, True),
                     cdtitle = get_image(assets['CDTITLE'], p, image_cache),
                     jacket = get_image(assets['JACKET'], p, image_cache),
+                    has_bgchanges = bool((sim.bgchanges or '').strip()),
+                    has_fgchanges = bool((sim.fgchanges or '').strip()),
+                    has_attacks = bool((sim.attacks or '').strip())
                 )
                 f.close()
 
@@ -170,12 +177,14 @@ def process_pack_upload(pack_data, filename):
                         steps_type = steps_type,
                         difficulty = difficulty,
                         meter = meter,
-                        credit = chart.get('CREDIT'),
-                        description = chart.description,
-                        chart_name = chart.get('CHARTNAME'),
+                        credit = chart.get('CREDIT', ''),
+                        description = chart.description or '',
+                        chart_name = chart.get('CHARTNAME', ''),
                         chart_hash = chart_hash,
                         density_graph = get_density_graph(sim, chart, chart_len),
                         release_date = p.release_date,
+                        upload_date = now,
+                        has_attacks = bool(chart.get('ATTACKS', '').strip()),
                         **counts
                     )
     finally:

@@ -15,12 +15,16 @@ td.bn-cell img {
     min-width: 12em;
 }
 
-.song-pack-col {
+.song-pack-col, .pack-author-col {
     min-width: 9em;
 }
 
 .song-info-col {
     min-width: 8.8em;
+}
+
+.song-info-col, .pack-info-col {
+    min-width: 7.8em;
 }
 
 .chart-desc-col {

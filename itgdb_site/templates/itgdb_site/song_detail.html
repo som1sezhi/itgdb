@@ -77,6 +77,17 @@
       </tr>
       {% endif %}
     </table>
+    
+    {% if song.has_bgchanges %}
+    &#x2728; Contains BG changes</br>
+    {% endif %}
+    {% if song.has_bgchanges %}
+    &#x2728; Contains FG changes</br>
+    {% endif %}
+    {% if song.has_attacks %}
+    &#x2728; Contains attacks</br>
+    {% endif %}
+
     <p class="mb-1">
     {% for link_label, link_url in links %}
       <a href="{{ link_url }}" target="_blank" rel="noopener noreferrer">
@@ -135,6 +146,10 @@
           </tr>
         {% endfor %}
         </table>
+
+        {% if not song.has_attacks and chart.has_attacks %}
+        <p>&#x2728; Contains attacks</p>
+        {% endif %}
       </div>
     </div>
 
