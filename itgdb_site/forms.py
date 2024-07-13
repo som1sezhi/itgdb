@@ -29,6 +29,14 @@ class PackSearchForm(forms.Form):
         required=False,
         max_length=255
     )
+    search_by = forms.ChoiceField(
+        label='',
+        required=False,
+        choices={
+            'name': 'Pack name',
+            'author': 'Pack author(s)'
+        }
+    )
     order_by = forms.ChoiceField(
         label='',
         required=False,
@@ -77,11 +85,13 @@ class PackSearchForm(forms.Form):
         self.helper.form_class = 'search-form p-2'
         self.helper.layout = Layout(
             Row(
-                FieldWithButtons(
-                    Field('q', placeholder='Pack name'),
+                Column(Field('search_by'), css_class='col-2', style="min-width: 10em;"),
+                Column(FieldWithButtons(
+                    Field('q'),
                     StrictButton("Search", type='submit', css_class='btn btn-primary'),
-                    input_size="input-group-sm"
-                )
+                    input_size="input-group-sm",
+                ), css_class='col'),
+                css_class='g-2'
             ),
             Row(
                 Column(HTML('Order by:'), css_class='col-auto py-1'),

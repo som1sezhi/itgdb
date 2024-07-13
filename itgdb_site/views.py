@@ -163,12 +163,21 @@ class PackSearchView(generic.ListView):
         if form.is_valid():
             try:
                 q = form.cleaned_data['q']
+                search_by = form.cleaned_data['search_by']
                 category = form.cleaned_data['category']
                 steps_types = list(map(int, form.cleaned_data['steps_type']))
                 num_charts = form.cleaned_data['num_charts']
                 tags = form.cleaned_data['tags']
 
-                qset = Pack.objects.filter(name__icontains=q)
+                if search_by == 'author':
+                    qset = Pack.objects.annotate(search=SearchVector(
+                        'author',
+                        config='public.itgdb_search'
+                    )).filter(search=SearchQuery(
+                        q, search_type='websearch', config='public.itgdb_search'
+                    ))
+                else: # search by pack name
+                    qset = Pack.objects.filter(name__icontains=q)
                 
                 qset = qset.annotate(
                     song_count=Count('song', distinct=True)
