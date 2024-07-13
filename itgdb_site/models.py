@@ -18,7 +18,9 @@ class ImageFile(models.Model):
     image = models.ImageField(storage=get_simfilemedia_storage)
 
     def __str__(self):
-        return f'{self.id}: {self.image.name.split("_", 1)[1]}'
+        splits = self.image.name.split("_", 1)
+        name = splits[1 if len(splits) > 1 else 0]
+        return f'{self.id}: {name}'
 
 
 class Tag(models.Model):
