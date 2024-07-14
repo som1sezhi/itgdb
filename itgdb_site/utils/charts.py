@@ -297,14 +297,33 @@ def get_density_graph(sim: Simfile, chart: Chart, chart_len: float) -> list:
     return nps_data
 
 
+# https://stackoverflow.com/a/37708342
+def _find_case_sensitive_path(dir: str, insensitive_path: str):
+    insensitive_path = os.path.normpath(insensitive_path)
+    insensitive_path = insensitive_path.lstrip(os.path.sep)
+
+    parts = insensitive_path.split(os.path.sep, 1)
+    next_name = parts[0]
+    for name in os.listdir(dir):
+        if next_name.lower() == name.lower():
+            improved_path = os.path.join(dir, name)
+            if len(parts) == 1:
+                return improved_path
+            else:
+                return _find_case_sensitive_path(
+                    improved_path, parts[1]
+                )
+    return None
+
+
 def _get_full_validated_asset_path(sim_dir_path: str, path: str):
     if not path:
         return None
-    full_path = os.path.normpath(os.path.join(sim_dir_path, path))
+    full_path = _find_case_sensitive_path(sim_dir_path, path)
     pack_path = os.path.dirname(sim_dir_path)
-    # ensure path does not point outside the pack
-    if full_path.startswith(pack_path):
-        # ensure file exists
+    # ensure path exists and does not point outside the pack
+    if full_path and full_path.startswith(pack_path):
+        # ensure path is a file
         if os.path.isfile(full_path):
             return full_path
     return None
@@ -368,7 +387,6 @@ def get_assets(simfile_dir: SimfileDirectory) -> Dict[str, str | None]:
     
     # for image assets that aren't found yet, check if filename matches the
     # appropriate asset pattern, and use it if so.
-    used_images = set()
     for prop in assets:
         if prop == 'MUSIC' or assets[prop]:
             continue
@@ -377,8 +395,11 @@ def get_assets(simfile_dir: SimfileDirectory) -> Dict[str, str | None]:
             base_fname_lower = fname.rsplit('.', 1)[0].lower()
             if re.search(pattern, base_fname_lower):
                 assets[prop] = os.path.join(sim_dir_path, fname)
-                used_images.add(fname)
                 break
+    
+    used_images = set(
+        os.path.basename(v) for k, v in assets.items() if v and k != 'MUSIC'
+    )
     
     # if assets still aren't found yet, look at the image dimensions
     # of the remaining images.

@@ -180,7 +180,9 @@ class PackSearchView(generic.ListView):
                 num_charts = form.cleaned_data['num_charts']
                 tags = form.cleaned_data['tags']
 
-                if search_by == 'author':
+                if not q:
+                    qset = Pack.objects.all()
+                elif search_by == 'author':
                     qset = Pack.objects.annotate(search=SearchVector(
                         'author',
                         config='public.itgdb_search'

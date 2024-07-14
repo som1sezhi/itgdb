@@ -43,7 +43,7 @@ class PackSearchForm(forms.Form):
         choices={
             'name': 'Pack name',
             'release_date': 'Release date',
-            'id': 'Upload date'
+            'upload_date': 'Upload date'
         }
     )
     order_dir = forms.ChoiceField(
@@ -134,7 +134,7 @@ class SongSearchForm(forms.Form):
         choices={
             'title': 'Title',
             'release_date': 'Release date',
-            'id': 'Upload date'
+            'upload_date': 'Upload date'
         }
     )
     order_dir = forms.ChoiceField(

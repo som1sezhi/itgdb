@@ -1,5 +1,5 @@
 #VERSION:0.83;
-#TITLE:GetAssets_test_find_via_multiple_methods;
+#TITLE:GetAssets_test_image_sizes_cannot_reuse;
 #SUBTITLE:;
 #ARTIST:;
 #TITLETRANSLIT:;
@@ -9,7 +9,7 @@
 #CREDIT:;
 #MUSIC:;
 #BANNER:;
-#BACKGROUND:img1 bkgd and bn.png;
+#BACKGROUND:img1.png;
 #CDTITLE:;
 #SAMPLESTART:0.000;
 #SAMPLELENGTH:0.000;

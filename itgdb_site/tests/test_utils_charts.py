@@ -73,7 +73,9 @@ class GetCountsTestClass(SimpleTestCase):
         )
 
 
-class GetAssetsTestClass(SimpleTestCase):    
+class GetAssetsTestClass(SimpleTestCase):
+    maxDiff = None
+    
     def _do_test(self, test_name, expected):
         test_dir_name = 'GetAssets_' + test_name
         sim_dir = _open_test_simfile_dir(test_dir_name)
@@ -135,23 +137,49 @@ class GetAssetsTestClass(SimpleTestCase):
             }
         )
 
-    def test_find_via_multiple_methods(self):
-        # test how different asset-finding methods interact:
-        # - if a file is found via simfile specification, it can still be
-        #   reused later on by other methods for other properties
-        # - if a file is found via filename hints, it cannot be reused later
-        #   on when finding via image sizes
-        # in this test:
-        # - banner is found via filename hints
-        # - background is found via simfile specification
-        # - cdtitle is found via image size hints
+    def test_simfile_spec_assets_can_be_reused(self):
+        # test that if a file is found via simfile specification, it can still
+        # be reused for other properties via filename hints
         self._do_test(
-            'test_find_via_multiple_methods',
+            'test_simfile_spec_assets_can_be_reused',
             {
                 'MUSIC': 'click.ogg',
                 'BANNER': 'img1 bkgd and bn.png',
                 'BACKGROUND': 'img1 bkgd and bn.png',
-                'CDTITLE': 'img2 not actually bn.png',
+                'CDTITLE': None,
+                'JACKET': None,
+                'CDIMAGE': None,
+                'DISC': None
+            }
+        )
+    
+    def test_image_sizes_cannot_reuse(self):
+        # test that if a file is found via simfile specification or filename
+        # hints, it cannot be reused for other properties via image size hints.
+        # Also tests that when selecting assets via filename hints, the first
+        # eligible file alphabetically is used.
+        self._do_test(
+            'test_image_sizes_cannot_reuse',
+            {
+                'MUSIC': 'click.ogg',
+                'BANNER': 'img2 bn.png',
+                'BACKGROUND': 'img1.png',
+                'CDTITLE': 'img3 not bn.png',
+                'JACKET': None,
+                'CDIMAGE': None,
+                'DISC': None
+            }
+        )
+    
+    def test_case_insensitive(self):
+        # test that simfile-specified filenames are case-insensitive.
+        self._do_test(
+            'test_case_insensitive',
+            {
+                'MUSIC': 'click.ogg',
+                'BANNER': 'imaGe1.avi',
+                'BACKGROUND': 'imAge2.png',
+                'CDTITLE': os.path.join('subDir', 'image3.png'),
                 'JACKET': None,
                 'CDIMAGE': None,
                 'DISC': None
