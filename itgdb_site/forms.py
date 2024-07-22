@@ -23,6 +23,10 @@ class PackUploadForm(forms.ModelForm):
         fields = ['name', 'author', 'release_date', 'category', 'tags', 'links']
 
 
+class BatchUploadForm(forms.Form):
+    file = forms.FileField(label='CSV file')
+
+
 class PackSearchForm(forms.Form):
     q = forms.CharField(
         label='',

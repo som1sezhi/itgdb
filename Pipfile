@@ -23,6 +23,9 @@ django-crispy-forms = "*"
 crispy-bootstrap5 = "*"
 gunicorn = "*"
 whitenoise = "*"
+"mega.py" = "*"
+gdown = "*"
+celery-progress = "*"
 
 [dev-packages]
 localstack = "*"

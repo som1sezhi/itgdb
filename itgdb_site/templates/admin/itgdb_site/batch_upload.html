@@ -1,0 +1,12 @@
+{% extends "admin_extra_buttons/action_page.html" %}
+{% load i18n static admin_list admin_urls %}
+{% block action-content %}
+<h1>Upload batch</h1>
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  <table>
+  {{ form.as_table }}
+  </table>
+  <input type="submit" value="Submit" />
+</form>
+{% endblock %}

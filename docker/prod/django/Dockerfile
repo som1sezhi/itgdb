@@ -38,8 +38,8 @@ RUN apt-get update \
     gettext \
     # for testing
     iputils-ping \
-    # for opening music files
-    ffmpeg \
+    # for opening various file formats
+    ffmpeg p7zip-full p7zip-rar \
     # cleaning up unused files
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*

@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'sorl.thumbnail',
     'crispy_forms',
     'crispy_bootstrap5',
+    'celery_progress',
     'django_cleanup.apps.CleanupConfig', # keep last
 ]
 
