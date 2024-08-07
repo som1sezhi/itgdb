@@ -45,6 +45,7 @@ if os.environ.get('CSRF_TRUSTED_ORIGINS'):
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne', # keep first
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -60,7 +61,6 @@ INSTALLED_APPS = [
     'sorl.thumbnail',
     'crispy_forms',
     'crispy_bootstrap5',
-    'celery_progress',
     'django_cleanup.apps.CleanupConfig', # keep last
 ]
 
@@ -224,18 +224,32 @@ THUMBNAIL_STORAGE = 'itgdb_site.storage_backends.ThumbnailStorage'
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
+# channels
+ASGI_APPLICATION = 'itgdb.asgi.application'
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [(
+                os.environ.get('CHANNEL_LAYER_HOST', 'localhost'),
+                os.environ.get('CHANNEL_LAYER_PORT', '6379')
+            )],
+        },
+    },
+}
+
 # only enable debug toolbar when not running tests
 # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#disable-the-toolbar-when-running-tests-optional
-TESTING = "test" in sys.argv
+TESTING = 'test' in sys.argv
 if not TESTING:
     INSTALLED_APPS = [
         *INSTALLED_APPS,
-        "debug_toolbar",
+        'debug_toolbar',
     ]
     MIDDLEWARE = [
         # insert as early as possible, but before
         # any response-encoding middleware
-        "debug_toolbar.middleware.DebugToolbarMiddleware",
+        'debug_toolbar.middleware.DebugToolbarMiddleware',
         *MIDDLEWARE,
     ]
 

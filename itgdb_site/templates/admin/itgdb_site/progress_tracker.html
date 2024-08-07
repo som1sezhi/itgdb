@@ -3,135 +3,18 @@
 {% block content %}
 <h1>Progress Tracker</h1>
 
-<h2>Group Progress</h2>
-
-<div class='progress-wrapper'>
-  <div id='progress-bar' class='progress-bar' style="background-color: #68a9ef; width: 0%;">&nbsp;</div>
-  <div id="progress-bar-message">Waiting for progress to start...</div>
-</div>
-
-<h2>Task Progress</h2>
-
-{% for _ in task_ids %}
+{% for task_id in task_ids %}
 <div class='progress-wrapper-{{ forloop.counter0 }}'>
-  <div id='progress-bar-{{ forloop.counter0 }}' class='progress-bar-{{ forloop.counter0 }}' style="background-color: #68a9ef; width: 0%;">&nbsp;</div>
-  <div id="progress-bar-message-{{ forloop.counter0 }}">Waiting for progress to start...</div>
-  <div id="progress-result-{{ forloop.counter0 }}"><br /></div>
+  <div>Task {{ task_id }}</div>
+  <div id='progress-bar-{{ forloop.counter0 }}'>&nbsp;</div>
+  <div id="progress-bar-message-{{ forloop.counter0 }}"></div>
 </div>
 {% endfor %}
 
-<script src="{% static 'celery_progress/celery_progress.js' %}"></script>
+<script src="{% static 'admin/progress_bar.js' %}"></script>
 <script type="text/javascript">
-  /* Some of this following code is adapted from celery-progress,
-     licensed under MIT:
-
-    Copyright (c) 2018 Cory Zue
-
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
-
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
-
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE.
-  */
-
-  // I want individual progress bars for each task in the group, but I don't
-  // want each bar to send its own requests when there could potentially be
-  // hundreds of bars. Instead, we puppet CeleryProgressBar to use one larger
-  // request/response for all the bars.
-  // A lot of this relies on undocumented behavior/interfaces, but it's
-  // probably fine
-
-  class ProgressFetcher {
-    constructor(progressUrl, options) {
-      this.progressUrl = progressUrl;
-      options = options || {};
-      this.pollInterval = options.pollInterval || 500;
-      this.maxNetworkRetryAttempts = options.maxNetworkRetryAttempts || 5;
-
-      // array of progress bars subscribed to this fetcher
-      this.progressBars = [];
-      this.taskIds = [];
-    }
-
-    subscribe(bar, taskId) {
-      this.progressBars.push(bar);
-      this.taskIds.push(taskId);
-    }
-
-    onError(method, ...args) {
-      for (const bar of this.progressBars)
-        bar[method](bar.progressBarElement, bar.progressBarMessageElement, ...args);
-    }
-
-    onData(data) {
-      let complete = true;
-      for (let i = 0; i < data.length; i++) {
-        const bar = this.progressBars[i];
-        const barData = data[i];
-        let taskComplete = bar.onData(barData);
-        complete &&= taskComplete;
-      }
-      return complete;
-    }
-
-    async connect() {
-      let response;
-      let success = false;
-      let error = null;
-      let attempts = 0;
-      while(!success && attempts < this.maxNetworkRetryAttempts) {
-        try {
-          response = await fetch(
-            this.progressUrl
-          );
-          success = true;
-        } catch (networkError) {
-          error = networkError;
-          this.onError("onNetworkError", "Network Error");
-          attempts++;
-          await new Promise(r => setTimeout(r, 1000));
-        }
-      }
-
-      if (!success) {
-        throw(error)
-      }
-
-      if (response.status === 200) {
-        let data;
-        try {
-          data = await response.json();
-        } catch (parsingError) {
-          this.onError("onDataError", "Parsing Error");
-            throw parsingError;
-        }
-
-        const complete = this.onData(data);
-
-        if (complete === false) {
-          setTimeout(this.connect.bind(this), this.pollInterval);
-        }
-      } else {
-        this.onError("onHttpError", "HTTP Code " + response.status, response);
-      }
-    }
-  }
-
   document.addEventListener("DOMContentLoaded", function () {
-    let progressUrl = "{% url 'celery_progress:group_status' group_id %}";
-    CeleryProgressBar.initProgressBar(progressUrl, {pollInterval: 1000});
+    const progressController = new ProgressBarController("/ws/progress");
 
     const taskIds = [
       {% for task_id in task_ids %}
@@ -139,21 +22,15 @@
       {% endfor %}
     ];
 
-    const progressFetcher = new ProgressFetcher(
-      "{% url 'admin:progress' group_id %}",
-      {
-        pollInterval: 1000
-      }
-    );
     for (let i = 0; i < taskIds.length; i++) {
-      const bar = new CeleryProgressBar(null, {
-        progressBarId: "progress-bar-" + i,
-        progressBarMessageId: "progress-bar-message-" + i,
-        resultElementId: "progress-result-" + i
+      const bar = new ProgressBar({
+        barElem: document.getElementById("progress-bar-" + i),
+        barMessageElem: document.getElementById("progress-bar-message-" + i)
       });
-      progressFetcher.subscribe(bar, taskIds[i]);
+      progressController.register(taskIds[i], bar);
     }
-    progressFetcher.connect();
+
+    progressController.start();
   });
 </script>
 {% endblock %}

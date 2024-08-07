@@ -21,7 +21,6 @@ from django.conf import settings
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('itgdb_site.urls')),
-    re_path(r'^celery-progress/', include('celery_progress.urls')),
 ]
 
 if not settings.TESTING:

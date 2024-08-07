@@ -319,9 +319,17 @@ def _find_case_sensitive_path(dir: str, insensitive_path: str):
 def _get_full_validated_asset_path(sim_dir_path: str, path: str):
     if not path:
         return None
-    full_path = _find_case_sensitive_path(sim_dir_path, path)
     pack_path = os.path.dirname(sim_dir_path)
+    insensitive_full_path = os.path.normpath(os.path.join(sim_dir_path, path))
+    # get the true, case-sensitive path to the asset.
+    # we start the case-sensitive search from the pack directory so we can find
+    # assets outside the simfile directory but still in the pack directory
+    full_path = _find_case_sensitive_path(
+        pack_path, os.path.relpath(insensitive_full_path, start=pack_path)
+    )
+    
     # ensure path exists and does not point outside the pack
+    #print(full_path, pack_path)
     if full_path and full_path.startswith(pack_path):
         # ensure path is a file
         if os.path.isfile(full_path):
@@ -353,6 +361,9 @@ def get_assets(simfile_dir: SimfileDirectory) -> Dict[str, str | None]:
 
     sim = simfile_dir.open()
     sim_dir_path = os.path.normpath(simfile_dir.simfile_dir)
+
+    #print('====================', _get_full_validated_asset_path(sim_dir_path, sim.get('BANNER')))
+    #print(sim_dir_path, sim.get('BANNER'))
 
     # first, try to populate fields using the simfile's fields
     assets = {

@@ -31,7 +31,7 @@ class Tag(models.Model):
 
 
 class PackCategory(models.Model):
-    name = models.CharField(max_length=32)
+    name = models.CharField(max_length=32, unique=True)
     abbr = models.CharField(max_length=4, blank=True, null=True)
     color = models.CharField(max_length=32, blank=True, null=True)
 
@@ -43,7 +43,7 @@ class Pack(models.Model):
     name = models.CharField(max_length=255, blank=True)
     author = models.CharField(max_length=255, blank=True)
     release_date = models.DateTimeField(blank=True, null=True)
-    upload_date = models.DateTimeField(blank=True, null=True)
+    upload_date = models.DateTimeField(blank=True, null=True, auto_now_add=True)
     category = models.ForeignKey(
         PackCategory, on_delete=models.SET_NULL, blank=True, null=True
     )
@@ -73,7 +73,7 @@ class Song(models.Model):
     max_display_bpm = models.FloatField(null=True, blank=True)
     length = models.FloatField()
     release_date = models.DateTimeField(null=True, blank=True)
-    upload_date = models.DateTimeField(null=True, blank=True)
+    upload_date = models.DateTimeField(null=True, blank=True, auto_now_add=True)
     links = models.TextField(blank=True, default='')
     simfile = models.FileField(storage=get_simfiles_storage)
     banner = models.ForeignKey(
@@ -151,7 +151,7 @@ class Chart(models.Model):
     chart_name = models.CharField(max_length=255, blank=True, default='')
     chart_hash = models.CharField(max_length=40)
     release_date = models.DateTimeField(null=True, blank=True)
-    upload_date = models.DateTimeField(null=True, blank=True)
+    upload_date = models.DateTimeField(null=True, blank=True, auto_now_add=True)
     density_graph = models.JSONField()
     has_attacks = models.BooleanField(default=False)
     objects_count = models.PositiveIntegerField()

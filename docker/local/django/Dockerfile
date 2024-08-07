@@ -39,7 +39,7 @@ RUN apt-get update \
     # for testing
     iputils-ping procps \
     # for opening various file formats
-    ffmpeg p7zip-full unrar-free \
+    ffmpeg p7zip-full unrar-free file \
     # for downloading megacmd package
     wget
 

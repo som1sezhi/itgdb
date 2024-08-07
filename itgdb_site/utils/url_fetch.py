@@ -1,6 +1,7 @@
 """Routines for fetching pack files from URLs.
 """
 
+import os
 import re
 import urllib.request
 import shutil
@@ -12,7 +13,8 @@ from mega import Mega
 
 def fetch_from_url(url: str) -> str:
     filename = str(uuid.uuid4())
-    path = str(settings.MEDIA_ROOT / 'packs' / filename)
+    dir_path = str(settings.MEDIA_ROOT / 'packs')
+    path = os.path.join(dir_path, filename)
 
     # fetch from google drive
     if re.match('https?://drive.google.com/file/d/', url):
@@ -22,7 +24,7 @@ def fetch_from_url(url: str) -> str:
     elif re.match('https?://mega.nz/file/', url):
         mega = Mega()
         m = mega.login()
-        return str(m.download_url(url, path))
+        return str(m.download_url(url, dir_path, filename))
     
     # fetch from dropbox
     elif re.match('https?://www.dropbox.com/s/', url):

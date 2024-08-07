@@ -4,6 +4,7 @@
 import os
 import mimetypes
 import uuid
+from collections import namedtuple
 from django.core.files import File
 from django.utils import timezone
 from simfile.dir import SimfilePack, SimfileDirectory
@@ -22,7 +23,13 @@ from .charts import (
 logger = get_task_logger('itgdb_site.tasks')
 
 
-def get_image(path, pack, cache, generate_thumbnail=False):
+ProgressTrackingInfo = namedtuple(
+    'ProgressTrackingTask',
+    ['progress_tracker', 'finished_subparts', 'num_subparts']
+)
+
+
+def _get_image(path, pack, cache, generate_thumbnail=False):
     if not path or not os.path.isfile(path):
         return None
     if path in cache:
@@ -59,26 +66,38 @@ def get_image(path, pack, cache, generate_thumbnail=False):
     return None
 
 
-def upload_pack(simfile_pack: SimfilePack, pack_data: dict):
+def upload_pack(
+    simfile_pack: SimfilePack,
+    pack_data: dict,
+    prog_tracking_info: ProgressTrackingInfo | None = None
+):
     pack_path = simfile_pack.pack_dir
     image_cache = {}
-    now = timezone.now()
 
     p = Pack(
         name = pack_data['name'] or simfile_pack.name,
         author = pack_data['author'],
         release_date = pack_data['release_date'],
-        upload_date = now,
         category_id = pack_data['category'],
         links = pack_data['links']
     )
     p.save()
     p.tags.add(*pack_data['tags'])
     pack_bn_path = get_pack_banner_path(pack_path, simfile_pack)
-    p.banner = get_image(pack_bn_path, p, image_cache, True)
+    p.banner = _get_image(pack_bn_path, p, image_cache, True)
     p.save()
 
-    for simfile_dir in simfile_pack.simfile_dirs():
+    simfile_dirs = list(simfile_pack.simfile_dirs())
+    total_count = len(simfile_dirs)
+    for i, simfile_dir in enumerate(simfile_dirs):
+        # update progress bar, if needed
+        if prog_tracking_info:
+            prog_tracker, finished_subparts, num_subparts = prog_tracking_info
+            basename = os.path.basename(simfile_dir.simfile_dir)
+            prog_tracker.update_progress(
+                (finished_subparts + (i / total_count)) / num_subparts,
+                f'[{i + 1}/{total_count}] Processing {p.name}/{basename}'
+            )
         upload_song(simfile_dir, p, image_cache)
 
 
@@ -120,12 +139,11 @@ def upload_song(simfile_dir: SimfileDirectory, p: Pack, image_cache: dict):
             max_display_bpm = disp_range[1],
             length = music_len,
             release_date = p.release_date,
-            upload_date = p.upload_date,
             simfile = File(f, name=f'{sim_uuid}_{sim_filename}'),
-            banner = get_image(assets['BANNER'], p, image_cache, True),
-            bg = get_image(assets['BACKGROUND'], p, image_cache, True),
-            cdtitle = get_image(assets['CDTITLE'], p, image_cache),
-            jacket = get_image(assets['JACKET'], p, image_cache),
+            banner = _get_image(assets['BANNER'], p, image_cache, True),
+            bg = _get_image(assets['BACKGROUND'], p, image_cache, True),
+            cdtitle = _get_image(assets['CDTITLE'], p, image_cache),
+            jacket = _get_image(assets['JACKET'], p, image_cache),
             has_bgchanges = bool((sim.bgchanges or '').strip()),
             has_fgchanges = bool((sim.fgchanges or '').strip()),
             has_attacks = bool((sim.attacks or '').strip())
@@ -169,7 +187,6 @@ def upload_chart(chart: SimfileChart, s: Song, sim: Simfile, chart_len: float):
         chart_hash = chart_hash,
         density_graph = get_density_graph(sim, chart, chart_len),
         release_date = s.release_date,
-        upload_date = s.upload_date,
         has_attacks = bool(chart.get('ATTACKS', '').strip()),
         **counts
     )

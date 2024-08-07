@@ -1,74 +1,129 @@
-import mimetypes
 import os
 import shutil
-import uuid
 import zipfile
 import csv
 import time
 from django.conf import settings
-from django.core.files import File
 from django.core.files.storage import default_storage
 from django.db import transaction
-from django.utils import timezone
 from simfile.dir import SimfilePack
-from simfile.timing.displaybpm import displaybpm
 from celery import shared_task
+from celery.signals import task_postrun
 from celery.utils.log import get_task_logger
-import cv2
-from sorl.thumbnail import get_thumbnail
-from celery_progress.backend import ProgressRecorder
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+import patoolib
 
-from .models import Pack, Song, Chart, ImageFile
-from .utils.charts import (
-    get_hash, get_counts, get_density_graph, get_assets, get_pack_banner_path,
-    get_song_lengths
-)
-from .utils.uploads import upload_pack
+from .utils.uploads import upload_pack, ProgressTrackingInfo
+from .utils.url_fetch import fetch_from_url
 
 logger = get_task_logger(__name__)
+channel_layer = get_channel_layer()
+
+# Routines and classes for keeping track of progress: ================
+
+def _send_progress_update(task_id, state, progress, message):
+    async_to_sync(channel_layer.group_send)(task_id, {
+        'type': 'progress.update',
+        'data': {
+            'id': task_id,
+            'state': state,
+            'progress': progress,
+            'message': message
+        }
+    })
 
 
-def get_image(path, pack, cache, generate_thumbnail=False):
-    if not path or not os.path.isfile(path):
+@task_postrun.connect
+def task_postrun_handler(**kwargs):
+    state = kwargs['state']
+    retval = kwargs['retval']
+    if state == 'SUCCESS':
+        message = f'Success! {retval}'
+    elif state == 'FAILURE':
+        message = f'Failure: {retval}'
+    else:
+        message = f'{state}: {retval}'
+    _send_progress_update(kwargs['task_id'], state, 1, message)
+
+
+class ProgressTracker:
+    def __init__(self, task):
+        self.task = task
+    
+    def update_progress(self, progress, message=''):
+        self.task.update_state(
+            state='PROGRESS',
+            meta={
+                'progress': progress,
+                'message': message
+            }
+        )
+        _send_progress_update(self.task.request.id, 'PROGRESS', progress, message)
+
+
+# Tasks and task helper functions: ===================================
+
+def _open_pack_if_exists(dir_path):
+    simfile_pack = SimfilePack(dir_path)
+    # check if this directory is actually a pack directory by checking
+    # if simfiles are present
+    if next(simfile_pack.simfile_dirs(), None) is None:
         return None
-    if path in cache:
-        return cache[path]
-    
-    mimetype = mimetypes.guess_type(path)[0]
-    img_path = None
-    if mimetype.startswith('image'):
-        img_path = path 
-    elif mimetype.startswith('video'):
-        # get first frame of video
-        video_capture = cv2.VideoCapture(path)
-        success, img = video_capture.read()
-        if success:
-            img_path = path + '.png'
-            cv2.imwrite(img_path, img)
-        video_capture.release()
+    return simfile_pack
 
-    if img_path:
-        with open(img_path, 'rb') as f:
-            base_filename = os.path.basename(img_path)
-            img_file = ImageFile(
-                pack = pack,
-                image = File(f, name=f'{uuid.uuid4()}_{base_filename}')
+
+def _find_packs(pack_names, extracted_path):
+
+    found_packs = {}
+    # get all candidate pack directories
+    for name in os.listdir(extracted_path):
+        subdir_path = os.path.join(extracted_path, name)
+        if os.path.isdir(subdir_path):
+            pack = _open_pack_if_exists(subdir_path)
+            if pack:
+                found_packs[name.lower()] = pack
+
+    # if we haven't found a pack yet, we can try interpreting the
+    # extraction destination directory as a pack (if only 1 pack is requested)
+    if not found_packs and len(pack_names) == 1:
+        pack = _open_pack_if_exists(extracted_path)
+        if pack:
+            return [pack]
+    
+    # give an error if we didn't find enough packs
+    if len(found_packs) < len(pack_names):
+        raise RuntimeError(
+            f'requested {len(pack_names)} packs '
+            f'but only {len(found_packs)} were found'
+        )
+
+    # if only 1 pack is found, just use that one if only 1 pack is requested
+    if len(found_packs) == 1 and len(pack_names) == 1:
+        return [pack for pack in found_packs.values()]
+    
+    # otherwise, match packs with pack names by their directory name
+    packs_to_return = []
+    for pack_name in pack_names:
+        name_lower = pack_name.lower()
+        if name_lower in found_packs:
+            packs_to_return.append(found_packs[name_lower])
+        else:
+            raise RuntimeError(
+                f'could not find pack with name {pack_name} '
+                f'(found names: {list(found_packs.keys())})'
             )
-            img_file.save()
-            if generate_thumbnail:
-                # pregenerate thumbnail
-                # NOTE: geometry string here is for banner thumbnails
-                get_thumbnail(img_file.image, 'x50')
-            cache[path] = img_file
-            return img_file
     
-    return None
+    return packs_to_return
 
 
-@shared_task()
-def process_pack_upload(pack_data, filename):
+@shared_task(bind=True)
+def process_pack_upload(self, pack_data, filename):
     # TODO: error handling
 
+    prog_tracker = ProgressTracker(self)
+
+    prog_tracker.update_progress(0, f'Extracting {filename}')
     file = default_storage.open(filename)
     extract_dir = os.path.basename(filename).rsplit('.')[0]
     extract_path = os.path.join(settings.MEDIA_ROOT, 'extracted', extract_dir)
@@ -87,26 +142,57 @@ def process_pack_upload(pack_data, filename):
         # https://github.com/un1t/django-cleanup/issues/43
         with transaction.atomic():
             simfile_pack = SimfilePack(pack_path)
-            upload_pack(simfile_pack, pack_data)
+            upload_pack(
+                simfile_pack, pack_data,
+                ProgressTrackingInfo(prog_tracker, 0, 1)
+            )
     finally:
         shutil.rmtree(extract_path)
 
 
-@shared_task()
-def process_batch_upload(filename):
-    f = default_storage.open(filename, 'r')
-    with f.open('r', newline='') as csvfile:
-        reader = csv.reader(csvfile)
-        for row in reader:
-            print(row)
-    default_storage.delete(filename)
-    upload_pack()
+@shared_task(bind=True)
+def process_pack_from_web(self, pack_data_list, source_link):
+    prog_tracker = ProgressTracker(self)
+
+    prog_tracker.update_progress(0, f'Downloading {source_link}')
+    file_path = fetch_from_url(source_link)
+
+    try:
+        filename = os.path.basename(file_path)
+        prog_tracker.update_progress(0, f'Extracting {filename}')
+        extract_dir = filename.rsplit('.', 1)[0]
+        extract_path = os.path.join(settings.MEDIA_ROOT, 'extracted', extract_dir)
+        patoolib.extract_archive(
+            file_path, verbosity=-1, outdir=extract_path, interactive=False
+        )
+    finally:
+        os.remove(file_path)
+
+    try:
+        pack_names = [data['name'] for data in pack_data_list]
+        packs = _find_packs(pack_names, extract_path)
+
+        with transaction.atomic():
+            num_packs = len(pack_data_list)
+            for i, (pack, pack_data) in enumerate(zip(packs, pack_data_list)):
+                upload_pack(
+                    pack, pack_data,
+                    ProgressTrackingInfo(prog_tracker, i, num_packs)
+                )
+    finally:
+        shutil.rmtree(extract_path)
+
 
 
 @shared_task(bind=True)
 def test_task(self, sleep_time):
-    progress_recorder = ProgressRecorder(self)
+    prog_tracker = ProgressTracker(self)
     for i in range(sleep_time):
         time.sleep(1)
-        progress_recorder.set_progress(i + 1, sleep_time, description=f'sleeping for {i+1} seconds')
+        prog_tracker.update_progress(
+            (i + 1) / sleep_time,
+            f'sleeping for {i+1}/{sleep_time} seconds'
+        )
+        if i == 5 and sleep_time == 13:
+            raise ValueError('hello')
     return sleep_time + 1

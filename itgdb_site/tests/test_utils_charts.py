@@ -83,9 +83,9 @@ class GetAssetsTestClass(SimpleTestCase):
 
         # convert expected dict values from relative to absolute paths
         expected = {
-            prop: os.path.join(
+            prop: os.path.normpath(os.path.join(
                 TEST_BASE_DIR, 'simfile_dirs', test_dir_name, filename
-            ) if filename else filename
+            )) if filename else filename
             for prop, filename in expected.items()
         }
         self.assertEqual(expected, actual)
@@ -185,6 +185,28 @@ class GetAssetsTestClass(SimpleTestCase):
                 'DISC': None
             }
         )
+    
+    def test_outside_simfile_dir(self):
+        # test that assets can be found outside the simfile directory
+        # as long as it is still in the pack directory.
+        # also ensures case-insensitivity is supported outside of the
+        # simfile directory
+        # here, 'simfile_dirs' will act as the pack directory
+        self._do_test(
+            'test_outside_simfile_dir',
+            {
+                'MUSIC': 'click.ogg',
+                'BANNER': os.path.join(
+                    '..', 'GetAssets_test_outside_simfile_dir_GFX', 'bn.png'
+                ),
+                'BACKGROUND': None,
+                'CDTITLE': None,
+                'JACKET': None,
+                'CDIMAGE': None,
+                'DISC': None
+            }
+        )
+
 
     def test_find_fail(self):
         # test that various failure cases are handled:

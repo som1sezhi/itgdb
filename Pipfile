@@ -21,11 +21,12 @@ django-mathfilters = "*"
 sorl-thumbnail = "*"
 django-crispy-forms = "*"
 crispy-bootstrap5 = "*"
-gunicorn = "*"
 whitenoise = "*"
 "mega.py" = "*"
 gdown = "*"
-celery-progress = "*"
+channels = {extras = ["daphne"], version = "*"}
+channels-redis = "*"
+patool = "*"
 
 [dev-packages]
 localstack = "*"
