@@ -37,7 +37,7 @@ RUN apt-get update \
     # Translations dependencies
     gettext \
     # for testing
-    iputils-ping procps \
+    iputils-ping procps strace \
     # for opening various file formats
     ffmpeg p7zip-full unrar-free file \
     # for downloading megacmd package

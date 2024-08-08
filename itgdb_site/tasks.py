@@ -185,7 +185,8 @@ def process_pack_from_web(self, pack_data_list, source_link):
 
 
 @shared_task(bind=True)
-def test_task(self, sleep_time):
+def test_task(self, sleep_time, date):
+    print(repr(date))
     prog_tracker = ProgressTracker(self)
     for i in range(sleep_time):
         time.sleep(1)

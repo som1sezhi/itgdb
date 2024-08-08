@@ -6,7 +6,7 @@ from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render
 from django.urls import re_path, path, reverse
 from django.utils.dateparse import parse_datetime
-from django.utils.timezone import make_aware
+from django.utils.timezone import make_aware, now
 from admin_extra_buttons.api import ExtraButtonsMixin, button
 from django_celery_results.admin import TaskResultAdmin, GroupResultAdmin
 from django_celery_results.models import TaskResult, GroupResult
@@ -51,78 +51,23 @@ class PackAdmin(ExtraButtonsMixin, admin.ModelAdmin):
 
     @button()
     def batch_upload(self, req):
+        print('entered view')
         context = self.get_common_context(req)
         if req.method == 'POST':
             form = BatchUploadForm(req.POST, req.FILES)
             if form.is_valid():
+                print('validated form')
                 file = req.FILES['file']
-                lines = file.read().decode('utf-8').splitlines()
-                reader = csv.reader(lines)
-                next(reader) # skip header row
 
-                tasks = []
-                pack_data_list = []
-                for row in reader:
-                    # process row into a pack_data dict fit for consumption
-                    # by the celery task
-
-                    # first, try parsing as a datetime
-                    release_date = parse_datetime(row[2])
-                    if release_date:
-                        # assume this is in local timezone
-                        release_date = make_aware(release_date)
-                    else:
-                        # try parsing as just a date (with specified
-                        # time of midday)
-                        release_date = parse_datetime(row[2] + ' 12:00')
-                        if release_date:
-                            # midday utc means the same day in most other parts
-                            # of the world
-                            release_date = make_aware(
-                                release_date, timezone.utc
-                            )
-
-                    if row[3]:
-                        category, _ = PackCategory.objects.get_or_create(
-                            name=row[3]
-                        )
-                        category_id = category.id
-                    else:
-                        category_id = None
-                    
-                    if row[4]:
-                        tag_names = row[4].split(',')
-                        tag_ids = [
-                            Tag.objects.get_or_create(name=name)[0].id
-                            for name in tag_names
-                        ]
-                    else:
-                        tag_ids = []
-                            
-
-                    links = row[6:]
-                    # remove first line from links if blank
-                    if links and not links[0]:
-                        links.pop(0)
-
-                    pack_data = {
-                        'name': row[0],
-                        'author': row[1],
-                        'release_date': release_date,
-                        'category': category_id,
-                        'tags': tag_ids,
-                        'links': '\n'.join(links)
-                    }
-                    pack_data_list.append(pack_data)
-
-                    source_link = row[5]
-                    if source_link != '(see below)':
-                        tasks.append(process_pack_from_web.s(pack_data_list, source_link))
-                        pack_data_list = []
+                print('before parse')
+                tasks = self.parse_batch_csv_into_tasks(file)
+                print('after parse')
                         
                 task_group = group(tasks)
                 group_result = task_group.apply_async()
+                print('after task group')
                 group_result.save()
+                print('after group save')
                 
                 return HttpResponseRedirect(
                     reverse('admin:group_progress_tracker', args=(group_result.id,))
@@ -131,6 +76,80 @@ class PackAdmin(ExtraButtonsMixin, admin.ModelAdmin):
             form = BatchUploadForm()
         context['form'] = form
         return render(req, 'admin/itgdb_site/batch_upload.html', context)
+    
+    @staticmethod
+    def parse_batch_csv_into_tasks(csv_file):
+        """Parses a batch upload CSV file, and returns a list of Celery task
+        signatures that can be run to execute the batch upload."""
+        lines = csv_file.read().decode('utf-8').splitlines()
+        reader = csv.reader(lines)
+        next(reader) # skip header row
+
+        tasks = []
+        pack_data_list = []
+        for row in reader:
+            # process row into a pack_data dict fit for consumption
+            # by the celery task
+
+            if not row[2]:
+                release_date = None
+            else:
+                # first, try parsing as a datetime
+                release_date = parse_datetime(row[2])
+                if release_date:
+                    # assume datetime is in local timezone
+                    release_date = make_aware(release_date)
+                else:
+                    # try parsing as just a date (with specified
+                    # time of midday)
+                    release_date = parse_datetime(row[2] + ' 12:00')
+                    if release_date:
+                        # midday utc means the same day in most other parts of
+                        # the world, so it'll likely display a consistent date
+                        # in the frontend
+                        release_date = make_aware(
+                            release_date, timezone.utc
+                        )
+                    else:
+                        raise ValueError(f'invalid date {row[2]}')
+
+            if row[3]:
+                category, _ = PackCategory.objects.get_or_create(
+                    name=row[3]
+                )
+                category_id = category.id
+            else:
+                category_id = None
+            
+            if row[4]:
+                tag_names = row[4].split(',')
+                tag_ids = [
+                    Tag.objects.get_or_create(name=name)[0].id
+                    for name in tag_names
+                ]
+            else:
+                tag_ids = []
+                    
+            links = row[6:]
+            # remove blank lines
+            links = [line for line in links if line]
+
+            pack_data = {
+                'name': row[0],
+                'author': row[1],
+                'release_date': release_date,
+                'category': category_id,
+                'tags': tag_ids,
+                'links': '\n'.join(links)
+            }
+            pack_data_list.append(pack_data)
+
+            source_link = row[5]
+            if source_link != '(see below)':
+                tasks.append(process_pack_from_web.s(pack_data_list, source_link))
+                pack_data_list = []
+        
+        return tasks
     
     @button()
     def group_test(self, req):
@@ -143,7 +162,7 @@ class PackAdmin(ExtraButtonsMixin, admin.ModelAdmin):
                 tasks = []
                 reader = csv.DictReader(lines, fieldnames=['time'])
                 for row in reader:
-                    tasks.append(test_task.s(int(row['time'])))
+                    tasks.append(test_task.s(int(row['time']), now()))
                 task_group = group(tasks)
                 group_result = task_group.apply_async()
                 group_result.save()
