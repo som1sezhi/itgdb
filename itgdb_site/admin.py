@@ -17,7 +17,7 @@ import celery.result
 
 from .models import Tag, Pack, Song, Chart, ImageFile, PackCategory
 from .forms import PackUploadForm, BatchUploadForm
-from .tasks import process_pack_upload, process_pack_from_web, test_task
+from .tasks import process_pack_upload, process_pack_from_web
 
 logger = logging.getLogger(__name__)
 
