@@ -278,5 +278,9 @@ logging.config.dictConfig({
             'level': LOGLEVEL,
             'handlers': ['console',],
         },
+        'itgdb_site.admin': {
+            'level': 'DEBUG',
+            'propagate': True
+        }
     },
 })

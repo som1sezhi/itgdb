@@ -1,12 +1,14 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, time
 import csv
+import logging
 from django.contrib import admin
 from django.core.files.storage import default_storage
 from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render
 from django.urls import re_path, path, reverse
-from django.utils.dateparse import parse_datetime
+from django.utils.dateparse import parse_datetime, parse_date
 from django.utils.timezone import make_aware, now
+from django.contrib import messages
 from admin_extra_buttons.api import ExtraButtonsMixin, button
 from django_celery_results.admin import TaskResultAdmin, GroupResultAdmin
 from django_celery_results.models import TaskResult, GroupResult
@@ -16,6 +18,8 @@ import celery.result
 from .models import Tag, Pack, Song, Chart, ImageFile, PackCategory
 from .forms import PackUploadForm, BatchUploadForm
 from .tasks import process_pack_upload, process_pack_from_web, test_task
+
+logger = logging.getLogger(__name__)
 
 
 @admin.register(Pack)
@@ -51,23 +55,35 @@ class PackAdmin(ExtraButtonsMixin, admin.ModelAdmin):
 
     @button()
     def batch_upload(self, req):
-        print('entered view')
+        # for some reason sometimes the dev server would just hang when i
+        # uploaded a csv. then i refactored some stuff and it stopped hanging
+        # for some reason?
+        # i'm worried it'll come back, so just in case it does hang again, i
+        # put in these debug logs to see where it does
+        logger.debug('entered view')
         context = self.get_common_context(req)
         if req.method == 'POST':
             form = BatchUploadForm(req.POST, req.FILES)
             if form.is_valid():
-                print('validated form')
+                logger.debug('validated form')
                 file = req.FILES['file']
 
-                print('before parse')
-                tasks = self.parse_batch_csv_into_tasks(file)
-                print('after parse')
+                logger.debug('before parse')
+                try:
+                    tasks = self.parse_batch_csv_into_tasks(file)
+                except:
+                    messages.error(
+                        req, 'An error occurred while parsing the CSV.'
+                    )
+                    context['form'] = BatchUploadForm()
+                    return render(req, 'admin/itgdb_site/batch_upload.html', context)
+                logger.debug('after parse')
                         
                 task_group = group(tasks)
                 group_result = task_group.apply_async()
-                print('after task group')
+                logger.debug('after task group')
                 group_result.save()
-                print('after group save')
+                logger.debug('after group save')
                 
                 return HttpResponseRedirect(
                     reverse('admin:group_progress_tracker', args=(group_result.id,))
@@ -94,23 +110,23 @@ class PackAdmin(ExtraButtonsMixin, admin.ModelAdmin):
             if not row[2]:
                 release_date = None
             else:
-                # first, try parsing as a datetime
-                release_date = parse_datetime(row[2])
+                # first, try parsing as a date (datetime will return None)
+                release_date = parse_date(row[2])
                 if release_date:
-                    # assume datetime is in local timezone
-                    release_date = make_aware(release_date)
+                    # if good, set the time to midday utc.
+                    # midday utc means the same day in most other parts of
+                    # the world, so it'll likely display a consistent date
+                    # in the frontend
+                    release_date = datetime.combine(release_date, time(12, 0))
+                    release_date = make_aware(release_date, timezone.utc)
                 else:
-                    # try parsing as just a date (with specified
-                    # time of midday)
-                    release_date = parse_datetime(row[2] + ' 12:00')
+                    # now try parsing as a datetime
+                    release_date = parse_datetime(row[2])
                     if release_date:
-                        # midday utc means the same day in most other parts of
-                        # the world, so it'll likely display a consistent date
-                        # in the frontend
-                        release_date = make_aware(
-                            release_date, timezone.utc
-                        )
+                        # assume datetime is in local timezone
+                        release_date = make_aware(release_date)
                     else:
+                        # if can't parse as date or datetime, raise error
                         raise ValueError(f'invalid date {row[2]}')
 
             if row[3]:
