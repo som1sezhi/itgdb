@@ -166,30 +166,6 @@ class PackAdmin(ExtraButtonsMixin, admin.ModelAdmin):
                 pack_data_list = []
         
         return tasks
-    
-    @button()
-    def group_test(self, req):
-        context = self.get_common_context(req)
-        if req.method == 'POST':
-            form = BatchUploadForm(req.POST, req.FILES)
-            if form.is_valid():
-                file = req.FILES['file']
-                lines = file.read().decode('utf-8').splitlines()
-                tasks = []
-                reader = csv.DictReader(lines, fieldnames=['time'])
-                for row in reader:
-                    tasks.append(test_task.s(int(row['time']), now()))
-                task_group = group(tasks)
-                group_result = task_group.apply_async()
-                group_result.save()
-                
-                return HttpResponseRedirect(
-                    reverse('admin:group_progress_tracker', args=(group_result.id,))
-                )
-        else:
-            form = BatchUploadForm()
-        context['form'] = form
-        return render(req, 'admin/itgdb_site/batch_upload.html', context)
 
 
 admin.site.unregister(TaskResult)

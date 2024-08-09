@@ -1,7 +1,6 @@
 import os
 import shutil
 import zipfile
-import time
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.db import transaction
@@ -192,18 +191,3 @@ def process_pack_from_web(self, pack_data_list, source_link):
                 )
     finally:
         shutil.rmtree(extract_path)
-
-
-@shared_task(bind=True)
-def test_task(self, sleep_time, date):
-    print(repr(date))
-    prog_tracker = ProgressTracker(self)
-    for i in range(sleep_time):
-        time.sleep(1)
-        prog_tracker.update_progress(
-            (i + 1) / sleep_time,
-            f'sleeping for {i+1}/{sleep_time} seconds'
-        )
-        if i == 5 and sleep_time == 13:
-            raise ValueError('hello')
-    return sleep_time + 1
