@@ -1,4 +1,4 @@
-import os
+import logging
 from datetime import datetime, timezone
 from unittest.mock import patch
 from django.test import TestCase
@@ -9,12 +9,7 @@ from storages.backends.s3 import S3Storage
 
 from ..models import Tag, PackCategory, Pack, ImageFile, Song
 from ..utils.uploads import upload_pack
-
-TEST_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-def _open_test_pack(name: str) -> SimfilePack:
-    path = os.path.join(TEST_BASE_DIR, 'packs', name)
-    return SimfilePack(path)
+from ._common import open_test_pack
 
 in_mem_storage = InMemoryStorage()
 
@@ -28,6 +23,13 @@ class UploadPackTestClass(TestCase):
             Tag.objects.create(name='tag1'), Tag.objects.create(name='tag2')
         ]
         self.pack_category = PackCategory.objects.create(name='Technical')
+
+        # disable info logs for processing songs
+        logging.disable(logging.INFO)
+    
+    def tearDown(self):
+        # restore previous log level
+        logging.disable(logging.NOTSET)
 
     def _check_pack(self, actual_pack, expected_data):
         for attr, expected_attr in expected_data.items():
@@ -51,7 +53,7 @@ class UploadPackTestClass(TestCase):
         # - check that images are uploaded correctly
         #   - pack and song2 banner image should be the same object
         #   - pack/song2 banner is 100x70, song1 banner is 100x100
-        simfile_pack = _open_test_pack('UploadPack_test_upload')
+        simfile_pack = open_test_pack('UploadPack_test_upload')
         pack_data = {
             'name': 'Test Pack',
             'author': 'Author 1, Author 2',
@@ -91,7 +93,7 @@ class UploadPackTestClass(TestCase):
         # - name should be autofilled with name of pack directory
         # - upload_date should be filled
         # - other fields should be empty/null
-        simfile_pack = _open_test_pack('UploadPack_test_minimal_data')
+        simfile_pack = open_test_pack('UploadPack_test_minimal_data')
         pack_data = {
             'name': '',
             'author': '',

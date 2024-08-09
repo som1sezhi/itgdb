@@ -1,7 +1,6 @@
 import os
 import shutil
 import zipfile
-import csv
 import time
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -170,7 +169,19 @@ def process_pack_from_web(self, pack_data_list, source_link):
 
     try:
         pack_names = [data['name'] for data in pack_data_list]
-        packs = _find_packs(pack_names, extract_path)
+        try:
+            packs = _find_packs(pack_names, extract_path)
+        except RuntimeError as e:
+            # sometimes, unar will create an additional directory within
+            # the extraction destination and extract all the files into there.
+            # check that directory first
+            contents = os.listdir(extract_path)
+            if len(contents) == 1 and os.path.isdir(
+                new_extract_path := os.path.join(extract_path, contents[0])
+            ):
+                packs = _find_packs(pack_names, new_extract_path)
+            else:
+                raise e
 
         with transaction.atomic():
             num_packs = len(pack_data_list)
@@ -181,7 +192,6 @@ def process_pack_from_web(self, pack_data_list, source_link):
                 )
     finally:
         shutil.rmtree(extract_path)
-
 
 
 @shared_task(bind=True)

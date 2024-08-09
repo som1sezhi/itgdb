@@ -39,7 +39,7 @@ RUN apt-get update \
     # for testing
     iputils-ping \
     # for opening various file formats
-    ffmpeg p7zip-full unrar-free file \
+    ffmpeg p7zip-full unar file \
     # cleaning up unused files
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*

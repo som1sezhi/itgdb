@@ -6,25 +6,12 @@ from simfile.types import Simfile, Chart
 from simfile.dir import SimfileDirectory
 
 from ..utils.charts import get_counts, get_assets, get_song_lengths
-
-TEST_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-def _open_test_simfile(name: str) -> Simfile:
-    path = os.path.join(TEST_BASE_DIR, 'sims', name)
-    return simfile.open(path)
-    
-def _open_test_chart(name: str) -> Tuple[Simfile, Chart]:
-    sim = _open_test_simfile(name)
-    return sim, sim.charts[0]
-
-def _open_test_simfile_dir(name: str) -> SimfileDirectory:
-    path = os.path.join(TEST_BASE_DIR, 'simfile_dirs', name)
-    return SimfileDirectory(path)
+from ._common import TEST_BASE_DIR, open_test_chart, open_test_simfile_dir
 
 
 class GetCountsTestClass(SimpleTestCase):
     def _do_test(self, test_name, expected):
-        sim, chart = _open_test_chart(f'GetCounts_{test_name}.ssc')
+        sim, chart = open_test_chart(f'GetCounts_{test_name}.ssc')
         actual = get_counts(sim, chart)
         self.assertEqual(expected, actual)
 
@@ -78,7 +65,7 @@ class GetAssetsTestClass(SimpleTestCase):
     
     def _do_test(self, test_name, expected):
         test_dir_name = 'GetAssets_' + test_name
-        sim_dir = _open_test_simfile_dir(test_dir_name)
+        sim_dir = open_test_simfile_dir(test_dir_name)
         actual = get_assets(sim_dir)
 
         # convert expected dict values from relative to absolute paths
