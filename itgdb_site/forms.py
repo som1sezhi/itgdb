@@ -101,7 +101,7 @@ class PackSearchForm(forms.Form):
                 Column(HTML('Order by:'), css_class='col-auto py-1'),
                 Column('order_by', css_class='col-auto'),
                 Column('order_dir', css_class='col-auto'),
-                css_class='g-2'
+                css_class='g-2 flex-nowrap'
             ),
             Accordion(
                 AccordionGroup('Filters',
@@ -186,7 +186,7 @@ class SongSearchForm(forms.Form):
                 Column(HTML('Order by:'), css_class='col-auto py-1'),
                 Column('order_by', css_class='col-auto'),
                 Column('order_dir', css_class='col-auto'),
-                css_class='g-2'
+                css_class='g-2 flex-nowrap'
             ),
             Accordion(AccordionGroup('Filters',
                 Row(
@@ -312,7 +312,7 @@ class ChartSearchForm(forms.Form):
                 Column(HTML('Order by:'), css_class='col-auto py-1'),
                 Column('order_by', css_class='col-auto'),
                 Column('order_dir', css_class='col-auto'),
-                css_class='g-2'
+                css_class='g-2 flex-nowrap'
             ),
             Accordion(AccordionGroup('Filters',
                 Row(

@@ -4,7 +4,7 @@
 
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=0.95">
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
     integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous" />
@@ -53,7 +53,10 @@
           </ul>
           <ul class="navbar-nav ms-auto">
             <li class="nav-item">
-              <button class="nav-link has-tooltip" title="Toggle theme" id="btnToggleTheme"></button>
+              <!-- I've had trouble getting the tooltip to disappear properly
+               on mobile when using a <button> and I'm not sure why.
+               <a> seems to work better though -->
+              <a href="javascript:;" class="nav-link has-tooltip" title="Toggle theme" id="btnToggleTheme"></a>
             </li>
           </ul>
         </div>
@@ -115,9 +118,11 @@
       // enable bootstrap tooltips
       // https://github.com/wenzhixin/bootstrap-table/issues/572#issuecomment-1104907618
       new bootstrap.Tooltip(document.body, {
-        selector: '.has-tooltip'
+        selector: '.has-tooltip',
+        trigger: 'hover'
       });
 
+      // sticky horizontal scrollbar for e.g. search results tables
       $(".floating-scroll").floatingScroll();
     })();
   </script>
