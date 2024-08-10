@@ -1,9 +1,11 @@
 from typing import Any
+from datetime import datetime, timezone, time, timedelta
 from django.db.models import Case, When, CharField, Count, Min, Max, F, FloatField, Value
 from django.db.models.functions import Coalesce, Upper, Cast
 from django.db.models.query import QuerySet
 from django.views import generic
 from django.contrib.postgres.search import SearchVector, SearchQuery
+from django.utils.timezone import make_aware
 
 from .models import Pack, Song, Chart
 from .forms import PackSearchForm, SongSearchForm, ChartSearchForm
@@ -20,6 +22,14 @@ def _create_links_iterable(links: str):
     if len(links_lines) % 2 == 1:
         links_lines.insert(0, 'Download')
     return zip(links_lines[::2], links_lines[1::2])
+
+def _create_min_datetime(date):
+    return datetime.combine(date, time(0, 0), tzinfo=timezone.utc)
+
+def _create_max_datetime(date):
+    return datetime.combine(
+        date + timedelta(days=1), time(0, 0), tzinfo=timezone.utc
+    )
 
 
 class IndexView(generic.ListView):
@@ -179,6 +189,8 @@ class PackSearchView(generic.ListView):
                 steps_types = list(map(int, form.cleaned_data['steps_type']))
                 num_charts = form.cleaned_data['num_charts']
                 tags = form.cleaned_data['tags']
+                min_release_date = form.cleaned_data['min_release_date']
+                max_release_date = form.cleaned_data['max_release_date']
 
                 if not q:
                     qset = Pack.objects.all()
@@ -216,6 +228,15 @@ class PackSearchView(generic.ListView):
                 
                 if tags:
                     qset = qset.filter(tags__in=form.cleaned_data['tags']).distinct()
+                
+                if min_release_date:
+                    qset = qset.filter(
+                        release_date__gte=_create_min_datetime(min_release_date)
+                    )
+                if max_release_date:
+                    qset = qset.filter(
+                        release_date__lt=_create_max_datetime(max_release_date)
+                    )
                 
                 # perform ordering
                 if form.cleaned_data['order_by']:
@@ -325,6 +346,8 @@ class SongSearchView(generic.ListView):
             max_length = form.cleaned_data['max_length']
             min_bpm = form.cleaned_data['min_bpm']
             max_bpm = form.cleaned_data['max_bpm']
+            min_release_date = form.cleaned_data['min_release_date']
+            max_release_date = form.cleaned_data['max_release_date']
 
             if q:
                 search_vec_title_fields = [
@@ -361,6 +384,14 @@ class SongSearchView(generic.ListView):
                 qset = qset.filter(min_display_bpm__gte=min_bpm)
             if max_bpm:
                 qset = qset.filter(max_display_bpm__lte=max_bpm)
+            if min_release_date:
+                qset = qset.filter(
+                    release_date__gte=_create_min_datetime(min_release_date)
+                )
+            if max_release_date:
+                qset = qset.filter(
+                    release_date__lt=_create_max_datetime(max_release_date)
+                )
 
             # perform ordering
             if form.cleaned_data['order_by']:
@@ -475,6 +506,14 @@ class ChartSearchView(generic.ListView):
                 qset = qset.filter(meter__gte=data['min_meter'])
             if data['max_meter']:
                 qset = qset.filter(meter__lte=data['max_meter'])
+            if data['min_release_date']:
+                qset = qset.filter(release_date__gte=_create_min_datetime(
+                    data['min_release_date']
+                ))
+            if data['max_release_date']:
+                qset = qset.filter(release_date__lt=_create_max_datetime(
+                    data['max_release_date']
+                ))
 
             # perform ordering
             if data['order_by']:

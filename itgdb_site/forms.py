@@ -81,6 +81,14 @@ class PackSearchForm(forms.Form):
         queryset=Tag.objects.all(),
         widget=forms.CheckboxSelectMultiple
     )
+    min_release_date = forms.DateField(
+        label='', required=False,
+        widget=forms.TextInput(attrs={'type': 'date'})
+    )
+    max_release_date = forms.DateField(
+        label='', required=False,
+        widget=forms.TextInput(attrs={'type': 'date'})
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -103,17 +111,28 @@ class PackSearchForm(forms.Form):
                 Column('order_dir', css_class='col-auto'),
                 css_class='g-2 flex-nowrap'
             ),
-            Accordion(
-                AccordionGroup('Filters',
-                    Row(
-                        Column('category'),
-                        Column('steps_type'),
-                        Column('num_charts', css_class='pe-5'),
-                        Column('tags')
-                    ),
-                    active=_get_filter_accordion_active_status(self)
-                )
-            )
+            Accordion(AccordionGroup('Filters',
+                Row(
+                    Column('category'),
+                    Column('steps_type'),
+                    Column('tags')
+                ),
+                Row(
+                    Column('num_charts', css_class='pe-5'),
+                    Column(Fieldset('Release date (from/to):', Row(
+                        Column(
+                            Field('min_release_date'),
+                            css_class='col-6'
+                        ),
+                        Column(
+                            Field('max_release_date'),
+                            css_class='col-6'
+                        ),
+                        css_class='g-2'
+                    ))),
+                ),
+                active=_get_filter_accordion_active_status(self)
+            ))
         )
 
 
@@ -166,6 +185,14 @@ class SongSearchForm(forms.Form):
     max_bpm = forms.FloatField(
         label='', required=False
     )
+    min_release_date = forms.DateField(
+        label='', required=False,
+        widget=forms.TextInput(attrs={'type': 'date'})
+    )
+    max_release_date = forms.DateField(
+        label='', required=False,
+        widget=forms.TextInput(attrs={'type': 'date'})
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -198,6 +225,19 @@ class SongSearchForm(forms.Form):
                         ),
                         Column(
                             Field('max_length', placeholder='Max'),
+                            css_class='col-6'
+                        ),
+                        css_class='g-2'
+                    ))),
+                ),
+                Row(
+                    Column(Fieldset('Release date (from/to):', Row(
+                        Column(
+                            Field('min_release_date'),
+                            css_class='col-6'
+                        ),
+                        Column(
+                            Field('max_release_date'),
                             css_class='col-6'
                         ),
                         css_class='g-2'
@@ -292,6 +332,14 @@ class ChartSearchForm(forms.Form):
     max_meter = forms.IntegerField(
         label='', required=False, min_value=1
     )
+    min_release_date = forms.DateField(
+        label='', required=False,
+        widget=forms.TextInput(attrs={'type': 'date'})
+    )
+    max_release_date = forms.DateField(
+        label='', required=False,
+        widget=forms.TextInput(attrs={'type': 'date'})
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -342,7 +390,6 @@ class ChartSearchForm(forms.Form):
                 ),
                 Row(
                     Column('steps_type'),
-                    Column('diff'),
                     Column(Fieldset('Difficulty:', Row(
                         Column(
                             Field('min_meter', placeholder='Min'),
@@ -353,7 +400,21 @@ class ChartSearchForm(forms.Form):
                             css_class='col-6'
                         ),
                         css_class='g-2'
-                    )))
+                    ))),
+                    Column(Fieldset('Release date (from/to):', Row(
+                        Column(
+                            Field('min_release_date'),
+                            css_class='col-6'
+                        ),
+                        Column(
+                            Field('max_release_date'),
+                            css_class='col-6'
+                        ),
+                        css_class='g-2'
+                    ))),
+                ),
+                Row(
+                    Column('diff'),
                 ),
                 active=_get_filter_accordion_active_status(self)
             ))

@@ -18,3 +18,9 @@ form.search-form legend {
 .page-link.fake-page-link:hover {
     background-color: inherit;
 }
+
+/* Make the difficulty checkboxes inline in the chart search page */
+#div_id_diff div.form-check {
+    display: inline-block;
+    margin-right: 1rem;
+}
