@@ -69,14 +69,16 @@ class PackSearchForm(forms.Form):
         choices=(('1', 'Single'), ('2', 'Double')),
         widget=forms.CheckboxSelectMultiple
     )
-    num_charts = forms.FloatField(
-        label='At least this many charts per song (on average):',
-        required=False,
-        min_value=1,
-        initial=1
+    num_singles_charts = forms.FloatField(
+        label='', required=False,
+        min_value=1, initial=1
+    )
+    num_doubles_charts = forms.FloatField(
+        label='', required=False,
+        min_value=1, initial=1
     )
     tags = forms.ModelMultipleChoiceField(
-        label='Has any of these tags:',
+        label='Has all of these tags:',
         required=False,
         queryset=Tag.objects.all(),
         widget=forms.CheckboxSelectMultiple
@@ -118,7 +120,17 @@ class PackSearchForm(forms.Form):
                     Column('tags')
                 ),
                 Row(
-                    Column('num_charts', css_class='pe-5'),
+                    Column(Fieldset('Avg. # of charts per song:', Row(
+                        Column(
+                            Field('num_singles_charts', placeholder='Singles'),
+                            css_class='col-6'
+                        ),
+                        Column(
+                            Field('num_doubles_charts', placeholder='Doubles'),
+                            css_class='col-6'
+                        ),
+                        css_class='g-2'
+                    ))),
                     Column(Fieldset('Release date (from/to):', Row(
                         Column(
                             Field('min_release_date'),

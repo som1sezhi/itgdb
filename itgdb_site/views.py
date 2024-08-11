@@ -1,6 +1,6 @@
 from typing import Any
 from datetime import datetime, timezone, time, timedelta
-from django.db.models import Case, When, CharField, Count, Min, Max, F, FloatField, Value
+from django.db.models import Case, When, CharField, Count, Min, Max, F, FloatField, Q
 from django.db.models.functions import Coalesce, Upper, Cast
 from django.db.models.query import QuerySet
 from django.views import generic
@@ -187,7 +187,8 @@ class PackSearchView(generic.ListView):
                 search_by = form.cleaned_data['search_by']
                 category = form.cleaned_data['category']
                 steps_types = list(map(int, form.cleaned_data['steps_type']))
-                num_charts = form.cleaned_data['num_charts']
+                num_singles_charts = form.cleaned_data['num_singles_charts']
+                num_doubles_charts = form.cleaned_data['num_doubles_charts']
                 tags = form.cleaned_data['tags']
                 min_release_date = form.cleaned_data['min_release_date']
                 max_release_date = form.cleaned_data['max_release_date']
@@ -203,31 +204,57 @@ class PackSearchView(generic.ListView):
                     ))
                 else: # search by pack name
                     qset = Pack.objects.filter(name__icontains=q)
-                
-                qset = qset.annotate(
-                    song_count=Count('song', distinct=True)
-                )
 
                 if category:
                     qset = qset.filter(category=category)
                 
                 if steps_types:
-                    qset = qset.filter(song__chart__steps_type__in=steps_types) \
-                        .annotate(num_steps_type=Count('song__chart__steps_type', distinct=True)) \
-                        .filter(num_steps_type=len(steps_types)) \
-                        .distinct()
-                
-                if num_charts:
-                    qset = qset.annotate(
-                        avg_num_charts=Cast(
-                            Count('song__chart', distinct=True), FloatField()
-                        ) / Cast('song_count', FloatField())
+                    qset = qset.filter(
+                        song__chart__steps_type__in=steps_types
+                    ).annotate(
+                        num_steps_type=Count('song__chart__steps_type', distinct=True)
                     ).filter(
-                        avg_num_charts__gte=num_charts
+                        num_steps_type=len(steps_types)
                     ).distinct()
                 
                 if tags:
-                    qset = qset.filter(tags__in=form.cleaned_data['tags']).distinct()
+                    tag_ids = [tag.id for tag in form.cleaned_data['tags']]
+                    qset = qset.filter(
+                        tags__id__in=tag_ids
+                    ).annotate(
+                        tags_count=Count('tags', distinct=True)
+                    ).filter(
+                        tags_count=len(tag_ids)
+                    ).distinct()
+                
+                qset = qset.annotate(
+                    song_count=Count('song', distinct=True)
+                )
+                
+                if num_singles_charts:
+                    qset = qset.annotate(
+                        avg_num_singles_charts=Cast(
+                            Count(
+                                'song__chart',
+                                filter=Q(song__chart__steps_type=1),
+                                distinct=True
+                            ), FloatField()
+                        ) / Cast('song_count', FloatField())
+                    ).filter(
+                        avg_num_singles_charts__gte=num_singles_charts
+                    ).distinct()
+                if num_doubles_charts:
+                    qset = qset.annotate(
+                        avg_num_doubles_charts=Cast(
+                            Count(
+                                'song__chart',
+                                filter=Q(song__chart__steps_type=2),
+                                distinct=True
+                            ), FloatField()
+                        ) / Cast('song_count', FloatField())
+                    ).filter(
+                        avg_num_doubles_charts__gte=num_doubles_charts
+                    ).distinct()
                 
                 if min_release_date:
                     qset = qset.filter(
@@ -271,7 +298,9 @@ class PackSearchView(generic.ListView):
         ctx['form'] = PackSearchForm(self.request.GET)
 
         packs = ctx['packs']
-        packs = packs.select_related('banner').prefetch_related('tags')
+        packs = packs.select_related(
+            'banner', 'category'
+        ).prefetch_related('tags')
 
         # fetch per-pack difficulty count data.
         # should probably note that strictly speaking, this counts the
@@ -449,7 +478,6 @@ class ChartSearchView(generic.ListView):
     def get_queryset(self) -> QuerySet[Song]:
         form = ChartSearchForm(self.request.GET)
         if form.is_valid():
-            print(form.cleaned_data)
             data = form.cleaned_data
             q = data['q']
             search_by = data['search_by']
