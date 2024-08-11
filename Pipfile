@@ -27,6 +27,7 @@ gdown = "*"
 channels = {extras = ["daphne"], version = "*"}
 channels-redis = "*"
 patool = "*"
+sentry-sdk = {extras = ["django"], version = "*"}
 
 [dev-packages]
 localstack = "*"

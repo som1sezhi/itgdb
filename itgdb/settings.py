@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import logging.config
 from PIL import ImageFile
+import sentry_sdk
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -237,6 +238,13 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+# sentry
+if os.environ.get('SENTRY_DSN'):
+    sentry_sdk.init(
+        dsn=os.environ.get('SENTRY_DSN'),
+        traces_sample_rate=1.0
+    )
 
 # only enable debug toolbar when not running tests
 # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#disable-the-toolbar-when-running-tests-optional
