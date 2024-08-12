@@ -100,5 +100,9 @@ Requires tables.css to be loaded.
       </tr>
     {% endfor %}
     </tbody>
+
+    {% if not packs %}
+      <caption class="text-center text-muted fst-italic">No packs!</caption>
+    {% endif %}
   </table>
 </div>

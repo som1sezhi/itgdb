@@ -8,6 +8,7 @@
 
 {% block head_extra %}
 <link href="{% static 'itgdb_site/song_detail.css' %}" rel="stylesheet" />
+<link href="{% static 'itgdb_site/tables.css' %}" rel="stylesheet" />
 {% endblock %}
 
 {% block body_extra %}
@@ -135,7 +136,7 @@
 {% endfor %}
 </ul>
 <div class="tab-content" id="chartTabsContent">
-{% for chart, chart_density_data in charts %}
+{% for chart, data in charts %}
   <div 
     class="p-3 tab-pane row"
     id="chart-{{ chart.id }}-panel"
@@ -143,8 +144,8 @@
     <div class="row mb-3">
       <div class="col-12 col-sm-6">
         <div class="row mb-1 ps-3 figure-caption">
-          Peak density: {{ chart_density_data.peak_nps|floatformat }} NPS
-          ({{ chart_density_data.peak_nps|mul:15|floatformat:"0" }} eBPM)
+          Peak density: {{ data.density_data.peak_nps|floatformat }} NPS
+          ({{ data.density_data.peak_nps|mul:15|floatformat:"0" }} eBPM)
         </div>
         <div class="row justify-content-center">
           <div class="density-chart-container">
@@ -226,6 +227,11 @@
           </tr>
         </table>
       </div>
+    </div>
+
+    <h4>Other releases of this chart</h4>
+    <div class="row pb-1">
+    {% include 'itgdb_site/components/chart_table.html' with charts=data.other_releases %}
     </div>
   </div>
 {% endfor %}

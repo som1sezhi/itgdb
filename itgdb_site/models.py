@@ -183,7 +183,7 @@ class Chart(models.Model):
     
     def __str__(self):
         return '[%s] %s %s (%s %s)' % (
-            self.song.pack.name,
+            self.song.pack.name if self.song.pack else '<single>',
             self.song.title,
             self.song.subtitle,
             Chart.STEPS_TYPE_CHOICES[self.steps_type],

@@ -153,5 +153,9 @@ Requires tables.css to be loaded.
       </tr>
     {% endfor %}
     </tbody>
+
+    {% if not songs %}
+      <caption class="text-center text-muted fst-italic">No songs!</caption>
+    {% endif %}
   </table>
 </div>

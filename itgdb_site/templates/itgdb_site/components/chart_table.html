@@ -3,7 +3,7 @@
 
 {% comment %}
 Recognized context variables:
-- chart (iterator of Chart)
+- charts (iterator of Chart)
 Requires tables.css to be loaded.
 {% endcomment %}
 
@@ -82,5 +82,9 @@ Requires tables.css to be loaded.
       </tr>
     {% endfor %}
     </tbody>
+
+    {% if not charts %}
+      <caption class="text-center text-muted fst-italic">No charts!</caption>
+    {% endif %}
   </table>
 </div>

@@ -156,7 +156,17 @@ class SongDetailView(generic.DetailView):
             for chart in charts
         ]
         ctx['links'] = _create_links_iterable(self.object.links)
-        ctx['charts'] = list(zip(charts, ctx['density_data']))
+        ctx['charts'] = [
+            (chart, {
+                'density_data': ctx['density_data'][i],
+                'other_releases': Chart.objects.filter(
+                    chart_hash=chart.chart_hash
+                ).exclude(pk=chart.pk).order_by(
+                    F('release_date').asc(nulls_last=True)
+                )
+            })
+            for i, chart in enumerate(charts)
+        ]
 
         # for some reason, using firstof in the django template breaks things
         # with sorl-thumbnail, so instead we decide which background image to
