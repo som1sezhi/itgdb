@@ -37,13 +37,80 @@ def _filter_by_max_release_date(qset, date):
         return qset.filter(release_date__lt=max_datetime)
     return qset
 
+def _get_pack_diff_data(packs):
+    '''Fetch per-pack difficulty count data and adds it to each pack object
+    as a diff_data property. Also returns the proper value for
+    show_double_nov.'''
+    # should probably note that strictly speaking, this counts the
+    # number of charts in each diff slot, not the number of songs with
+    # that diff slot, even though i often treat it like the latter.
+    # thus in the case of multiple edit charts, stuff may look technically
+    # incorrect, but i feel like the cases where that matters will be
+    # super rare, so i'll just leave it like this
+    charts = Chart.objects.filter(song__pack__in=packs)
+    diff_counts_queryset = charts.values(
+        'song__pack__id', 'steps_type', 'difficulty',
+    ).annotate(
+        min=Min('meter'),
+        max=Max('meter'),
+        count=Count('difficulty')
+    )
+    # organize the data into a dict
+    diff_data = {}
+    for entry in diff_counts_queryset:
+        pack_id = entry['song__pack__id']
+        steps_type = entry['steps_type']
+        diff = entry['difficulty']
+        diff_data[(pack_id, steps_type, diff)] = {
+            'steps_type': steps_type,
+            'diff': diff,
+            'min_meter': entry['min'],
+            'max_meter': entry['max'],
+            'song_count': entry['count'],
+        }
+    # grab the data from the dict in steps_type+diff order
+    # so the template can just iterate through it.
+    # also figure out if we need to display the double nov column
+    show_double_nov = False
+    for pack in packs:
+        data = []
+        for steps_type in Chart.STEPS_TYPE_CHOICES:
+            for diff in Chart.DIFFICULTY_CHOICES:
+                key = (pack.id, steps_type, diff)
+                if key in diff_data:
+                    data.append(diff_data[key])
+                    if steps_type == 2 and diff == 0:
+                        show_double_nov = True
+                else:
+                    data.append({
+                        'steps_type': steps_type,
+                        'diff': diff,
+                        'song_count': 0
+                    })
+        pack.diff_data = data
+    
+    return packs, show_double_nov
 
 class IndexView(generic.ListView):
     template_name = 'itgdb_site/index.html'
-    context_object_name = 'latest_uploaded_packs'
+    context_object_name = 'packs'
 
     def get_queryset(self):
-        return Pack.objects.order_by('-id')[:8]
+        return Pack.objects.annotate(
+            song_count=Count('song')
+        ).order_by('-upload_date')[:5]
+    
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        ctx = super().get_context_data(**kwargs)
+
+        packs = ctx['packs']
+        ctx['packs'], ctx['show_double_nov'] = _get_pack_diff_data(packs)
+
+        ctx['pack_count'] = Pack.objects.count()
+        ctx['song_count'] = Song.objects.count()
+        ctx['chart_count'] = Chart.objects.count()
+
+        return ctx
 
 
 class PackDetailView(generic.DetailView):
@@ -304,56 +371,7 @@ class PackSearchView(generic.ListView):
         # doesn't need to evaluate it
         packs = list(packs)
 
-        # fetch per-pack difficulty count data.
-        # should probably note that strictly speaking, this counts the
-        # number of charts in each diff slot, not the number of songs with
-        # that diff slot, even though i often treat it like the latter.
-        # thus in the case of multiple edit charts, stuff may look technically
-        # incorrect, but i feel like the cases where that matters will be
-        # super rare, so i'll just leave it like this
-        charts = Chart.objects.filter(song__pack__in=packs)
-        diff_counts_queryset = charts.values(
-            'song__pack__id', 'steps_type', 'difficulty',
-        ).annotate(
-            min=Min('meter'),
-            max=Max('meter'),
-            count=Count('difficulty')
-        )
-        # organize the data into a dict
-        diff_data = {}
-        for entry in diff_counts_queryset:
-            pack_id = entry['song__pack__id']
-            steps_type = entry['steps_type']
-            diff = entry['difficulty']
-            diff_data[(pack_id, steps_type, diff)] = {
-                'steps_type': steps_type,
-                'diff': diff,
-                'min_meter': entry['min'],
-                'max_meter': entry['max'],
-                'song_count': entry['count'],
-            }
-        # grab the data from the dict in steps_type+diff order
-        # so the template can just iterate through it.
-        # also figure out if we need to display the double nov column
-        ctx['show_double_nov'] = False
-        for pack in packs:
-            data = []
-            for steps_type in Chart.STEPS_TYPE_CHOICES:
-                for diff in Chart.DIFFICULTY_CHOICES:
-                    key = (pack.id, steps_type, diff)
-                    if key in diff_data:
-                        data.append(diff_data[key])
-                        if steps_type == 2 and diff == 0:
-                            ctx['show_double_nov'] = True
-                    else:
-                        data.append({
-                            'steps_type': steps_type,
-                            'diff': diff,
-                            'song_count': 0
-                        })
-            pack.diff_data = data
-        
-        ctx['packs'] = packs
+        ctx['packs'], ctx['show_double_nov'] = _get_pack_diff_data(packs)
 
         ctx['page_range'] = ctx['paginator'].get_elided_page_range(
             ctx['page_obj'].number, on_each_side=2, on_ends=1

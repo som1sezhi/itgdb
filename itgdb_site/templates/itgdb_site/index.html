@@ -1,15 +1,42 @@
 {% extends 'itgdb_site/base.html' %}
+{% load static %}
 
 {% block title %}Home{% endblock %}
 
+{% block head_extra %}
+<link href="{% static 'itgdb_site/tables.css' %}" rel="stylesheet" />
+{% endblock %}
+
 {% block content %}
-{% if latest_uploaded_packs %}
-<ul>
-  {% for pack in latest_uploaded_packs %}
-    <li><a href="{% url 'itgdb_site:pack_detail' pack.id %}">{{ pack.name }}</a></li>
-  {% endfor %}
-</ul>
-{% else %}
-<p>No packs yet!</p>
-{% endif %}
+<h1 class="text-center pt-2">Welcome to ITGDb!</h1>
+<p class="text-center">
+  <span class="fw-bold">{{ pack_count }}</span>
+  pack{{ pack_count|pluralize }},
+  <span class="fw-bold">{{ song_count }}</span>
+  song{{ song_count|pluralize }},
+  <span class="fw-bold">{{ chart_count }}</span>
+  chart{{ chart_count|pluralize }}
+</p>
+<div class="ps-2 pb-4">
+  <h4 class="pt-3">Recently uploaded packs</h4>
+  {% include 'itgdb_site/components/pack_table.html' %}
+
+  <h4 class="pt-3">What is ITGDb?</h4>
+  <p>
+    ITGDb is a database for
+    <a href="https://en.wikipedia.org/wiki/In_the_Groove_(video_game)">
+      In The Groove</a>-style
+    <a href="https://github.com/stepmania/stepmania">StepMania</a>
+    charts. It aims to make it easier than ever to find charts to your favorite
+    songs, or just to discover charts in general.
+  </p>
+  <p>
+    The source code for this website can be found on
+    <a href="https://github.com/som1sezhi/itgdb">GitHub</a>.
+  </p>
+  <p>
+    If you have any inquiries/comments/ideas/whatever concerning this website,
+    feel free to contact me at @som1sezhi on Discord.
+  </p>
+</div>
 {% endblock %}

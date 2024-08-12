@@ -64,7 +64,11 @@
     </nav>
     {% block content %}{% endblock %}
   </div>
-  {% block body_extra %}{% endblock %}
+  {% block body_extra %}
+  <div class="bg-image-container">
+    <div class="bg-image bg-image-blank"></div>
+  </div>
+  {% endblock %}
 
   <script src="https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js"></script>
   <script src="{% static 'itgdb_site/vendor/jquery.floatingscroll.min.js' %}"></script>
