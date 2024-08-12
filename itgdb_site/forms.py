@@ -63,10 +63,12 @@ class PackSearchForm(forms.Form):
         required=False,
         queryset=PackCategory.objects.order_by('name')
     )
-    steps_type = forms.MultipleChoiceField(
+    steps_type = forms.TypedMultipleChoiceField(
         label='Has steps type:',
         required=False,
-        choices=(('1', 'Single'), ('2', 'Double')),
+        choices=((1, 'Single'), (2, 'Double')),
+        coerce=int,
+        empty_value=[],
         widget=forms.CheckboxSelectMultiple
     )
     num_singles_charts = forms.FloatField(

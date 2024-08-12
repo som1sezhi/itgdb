@@ -23,13 +23,19 @@ def _create_links_iterable(links: str):
         links_lines.insert(0, 'Download')
     return zip(links_lines[::2], links_lines[1::2])
 
-def _create_min_datetime(date):
-    return datetime.combine(date, time(0, 0), tzinfo=timezone.utc)
+def _filter_by_min_release_date(qset, date):
+    if date:
+        min_datetime = datetime.combine(date, time(0, 0), tzinfo=timezone.utc)
+        return qset.filter(release_date__gte=min_datetime)
+    return qset
 
-def _create_max_datetime(date):
-    return datetime.combine(
-        date + timedelta(days=1), time(0, 0), tzinfo=timezone.utc
-    )
+def _filter_by_max_release_date(qset, date):
+    if date:
+        max_datetime = datetime.combine(
+            date + timedelta(days=1), time(0, 0), tzinfo=timezone.utc
+        )
+        return qset.filter(release_date__lt=max_datetime)
+    return qset
 
 
 class IndexView(generic.ListView):
@@ -182,109 +188,91 @@ class PackSearchView(generic.ListView):
     def get_queryset(self):
         form = PackSearchForm(self.request.GET)
         if form.is_valid():
-            try:
-                q = form.cleaned_data['q']
-                search_by = form.cleaned_data['search_by']
-                category = form.cleaned_data['category']
-                steps_types = list(map(int, form.cleaned_data['steps_type']))
-                num_singles_charts = form.cleaned_data['num_singles_charts']
-                num_doubles_charts = form.cleaned_data['num_doubles_charts']
-                tags = form.cleaned_data['tags']
-                min_release_date = form.cleaned_data['min_release_date']
-                max_release_date = form.cleaned_data['max_release_date']
+            data = form.cleaned_data
 
-                if not q:
-                    qset = Pack.objects.all()
-                elif search_by == 'author':
-                    qset = Pack.objects.annotate(search=SearchVector(
-                        'author',
-                        config='public.itgdb_search'
-                    )).filter(search=SearchQuery(
-                        q, search_type='websearch', config='public.itgdb_search'
-                    ))
-                else: # search by pack name
-                    qset = Pack.objects.filter(name__icontains=q)
+            if not data['q']:
+                qset = Pack.objects.all()
+            elif data['search_by'] == 'author':
+                qset = Pack.objects.annotate(search=SearchVector(
+                    'author',
+                    config='public.itgdb_search'
+                )).filter(search=SearchQuery(
+                    data['q'],
+                    search_type='websearch', config='public.itgdb_search'
+                ))
+            else: # search by pack name
+                qset = Pack.objects.filter(name__icontains=data['q'])
 
-                if category:
-                    qset = qset.filter(category=category)
-                
-                if steps_types:
-                    qset = qset.filter(
-                        song__chart__steps_type__in=steps_types
-                    ).annotate(
-                        num_steps_type=Count('song__chart__steps_type', distinct=True)
-                    ).filter(
-                        num_steps_type=len(steps_types)
-                    ).distinct()
-                
-                if tags:
-                    tag_ids = [tag.id for tag in form.cleaned_data['tags']]
-                    qset = qset.filter(
-                        tags__id__in=tag_ids
-                    ).annotate(
-                        tags_count=Count('tags', distinct=True)
-                    ).filter(
-                        tags_count=len(tag_ids)
-                    ).distinct()
-                
+            if data['category']:
+                qset = qset.filter(category=data['category'])
+            
+            if data['steps_type']:
+                qset = qset.filter(
+                    song__chart__steps_type__in=data['steps_type']
+                ).annotate(
+                    num_steps_type=Count(
+                        'song__chart__steps_type', distinct=True
+                    )
+                ).filter(
+                    num_steps_type=len(data['steps_type'])
+                ).distinct()
+            
+            if data['tags']:
+                tag_ids = [tag.id for tag in data['tags']]
+                qset = qset.filter(
+                    tags__id__in=tag_ids
+                ).annotate(
+                    tags_count=Count('tags', distinct=True)
+                ).filter(
+                    tags_count=len(tag_ids)
+                ).distinct()
+            
+            qset = qset.annotate(
+                song_count=Count('song', distinct=True)
+            )
+            
+            if data['num_singles_charts']:
                 qset = qset.annotate(
-                    song_count=Count('song', distinct=True)
-                )
-                
-                if num_singles_charts:
-                    qset = qset.annotate(
-                        avg_num_singles_charts=Cast(
-                            Count(
-                                'song__chart',
-                                filter=Q(song__chart__steps_type=1),
-                                distinct=True
-                            ), FloatField()
-                        ) / Cast('song_count', FloatField())
-                    ).filter(
-                        avg_num_singles_charts__gte=num_singles_charts
-                    ).distinct()
-                if num_doubles_charts:
-                    qset = qset.annotate(
-                        avg_num_doubles_charts=Cast(
-                            Count(
-                                'song__chart',
-                                filter=Q(song__chart__steps_type=2),
-                                distinct=True
-                            ), FloatField()
-                        ) / Cast('song_count', FloatField())
-                    ).filter(
-                        avg_num_doubles_charts__gte=num_doubles_charts
-                    ).distinct()
-                
-                if min_release_date:
-                    qset = qset.filter(
-                        release_date__gte=_create_min_datetime(min_release_date)
-                    )
-                if max_release_date:
-                    qset = qset.filter(
-                        release_date__lt=_create_max_datetime(max_release_date)
-                    )
-                
-                # perform ordering
-                if form.cleaned_data['order_by']:
-                    if form.cleaned_data['order_by'] == 'name':
-                        # do case-insensitive sort
-                        order_field = Upper('name')
-                    else:
-                        order_field = F(form.cleaned_data['order_by'])
-                else:
+                    avg_num_singles_charts=Cast(
+                        Count(
+                            'song__chart',
+                            filter=Q(song__chart__steps_type=1),
+                            distinct=True
+                        ), FloatField()
+                    ) / Cast('song_count', FloatField())
+                ).filter(
+                    avg_num_singles_charts__gte=data['num_singles_charts']
+                ).distinct()
+            if data['num_doubles_charts']:
+                qset = qset.annotate(
+                    avg_num_doubles_charts=Cast(
+                        Count(
+                            'song__chart',
+                            filter=Q(song__chart__steps_type=2),
+                            distinct=True
+                        ), FloatField()
+                    ) / Cast('song_count', FloatField())
+                ).filter(
+                    avg_num_doubles_charts__gte=data['num_doubles_charts']
+                ).distinct()
+            
+            qset = _filter_by_min_release_date(qset, data['min_release_date'])
+            qset = _filter_by_max_release_date(qset, data['max_release_date'])
+            
+            # perform ordering
+            if data['order_by']:
+                if data['order_by'] == 'name':
+                    # do case-insensitive sort
                     order_field = Upper('name')
-                if form.cleaned_data['order_dir'] == 'desc':
-                    order_field = order_field.desc(nulls_last=True)
                 else:
-                    order_field = order_field.asc(nulls_last=True)
-                qset = qset.order_by(order_field)
-
-            # i actually forgot what this was supposed to catch lol
-            except ValueError:
-                qset = Pack.objects.annotate(
-                    song_count=Count('song', distinct=True)
-                ).order_by(Upper('name'))
+                    order_field = F(data['order_by'])
+            else:
+                order_field = Upper('name')
+            if data['order_dir'] == 'desc':
+                order_field = order_field.desc(nulls_last=True)
+            else:
+                order_field = order_field.asc(nulls_last=True)
+            qset = qset.order_by(order_field)
         else:
             qset = Pack.objects.annotate(
                 song_count=Count('song', distinct=True)
@@ -301,6 +289,10 @@ class PackSearchView(generic.ListView):
         packs = packs.select_related(
             'banner', 'category'
         ).prefetch_related('tags')
+
+        # evaluate queryset so the subsequent difficulty count fetch
+        # doesn't need to evaluate it
+        packs = list(packs)
 
         # fetch per-pack difficulty count data.
         # should probably note that strictly speaking, this counts the
@@ -368,26 +360,18 @@ class SongSearchView(generic.ListView):
     def get_queryset(self) -> QuerySet[Song]:
         form = SongSearchForm(self.request.GET)
         if form.is_valid():
-            q = form.cleaned_data['q']
-            search_by = form.cleaned_data['search_by']
-            category = form.cleaned_data['category']
-            min_length = form.cleaned_data['min_length']
-            max_length = form.cleaned_data['max_length']
-            min_bpm = form.cleaned_data['min_bpm']
-            max_bpm = form.cleaned_data['max_bpm']
-            min_release_date = form.cleaned_data['min_release_date']
-            max_release_date = form.cleaned_data['max_release_date']
+            data = form.cleaned_data
 
-            if q:
+            if data['q']:
                 search_vec_title_fields = [
                     'title', 'subtitle', 'title_translit', 'subtitle_translit'
                 ]
                 search_vec_artist_fields = [
                     'artist', 'artist_translit',
                 ]
-                if search_by == 'title':
+                if data['search_by'] == 'title':
                     search_vec_args = search_vec_title_fields
-                elif search_by == 'artist':
+                elif data['search_by'] == 'artist':
                     search_vec_args = search_vec_artist_fields
                 else: # search_by == titleartist
                     search_vec_args = \
@@ -397,41 +381,36 @@ class SongSearchView(generic.ListView):
                     *search_vec_args,
                     config='public.itgdb_search'
                 )).filter(search=SearchQuery(
-                    q, search_type='websearch', config='public.itgdb_search'
+                    data['q'],
+                    search_type='websearch', config='public.itgdb_search'
                 ))
             else:
                 qset = Song.objects.all()
 
-            if category:
-                qset = qset.filter(pack__category=category)
+            if data['category']:
+                qset = qset.filter(pack__category=data['category'])
             
-            if min_length:
-                qset = qset.filter(length__gte=min_length)
-            if max_length:
-                qset = qset.filter(length__lte=max_length)
-            if min_bpm:
-                qset = qset.filter(min_display_bpm__gte=min_bpm)
-            if max_bpm:
-                qset = qset.filter(max_display_bpm__lte=max_bpm)
-            if min_release_date:
-                qset = qset.filter(
-                    release_date__gte=_create_min_datetime(min_release_date)
-                )
-            if max_release_date:
-                qset = qset.filter(
-                    release_date__lt=_create_max_datetime(max_release_date)
-                )
+            if data['min_length']:
+                qset = qset.filter(length__gte=data['min_length'])
+            if data['max_length']:
+                qset = qset.filter(length__lte=data['max_length'])
+            if data['min_bpm']:
+                qset = qset.filter(min_display_bpm__gte=data['min_bpm'])
+            if data['max_bpm']:
+                qset = qset.filter(max_display_bpm__lte=data['max_bpm'])
+            qset = _filter_by_min_release_date(qset, data['min_release_date'])
+            qset = _filter_by_max_release_date(qset, data['max_release_date'])
 
             # perform ordering
-            if form.cleaned_data['order_by']:
-                if form.cleaned_data['order_by'] == 'title':
+            if data['order_by']:
+                if data['order_by'] == 'title':
                     # do case-insensitive sort
                     order_field = Upper('title')
                 else:
-                    order_field = F(form.cleaned_data['order_by'])
+                    order_field = F(data['order_by'])
             else:
                 order_field = Upper('title')
-            if form.cleaned_data['order_dir'] == 'desc':
+            if data['order_dir'] == 'desc':
                 order_field = order_field.desc(nulls_last=True)
             else:
                 order_field = order_field.asc(nulls_last=True)
@@ -534,14 +513,8 @@ class ChartSearchView(generic.ListView):
                 qset = qset.filter(meter__gte=data['min_meter'])
             if data['max_meter']:
                 qset = qset.filter(meter__lte=data['max_meter'])
-            if data['min_release_date']:
-                qset = qset.filter(release_date__gte=_create_min_datetime(
-                    data['min_release_date']
-                ))
-            if data['max_release_date']:
-                qset = qset.filter(release_date__lt=_create_max_datetime(
-                    data['max_release_date']
-                ))
+            qset = _filter_by_min_release_date(qset, data['min_release_date'])
+            qset = _filter_by_max_release_date(qset, data['max_release_date'])
 
             # perform ordering
             if data['order_by']:
