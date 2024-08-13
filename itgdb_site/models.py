@@ -95,6 +95,8 @@ class Song(models.Model):
     has_bgchanges = models.BooleanField(default=False)
     has_fgchanges = models.BooleanField(default=False)
     has_attacks = models.BooleanField(default=False)
+    has_sm = models.BooleanField(default=False)
+    has_ssc = models.BooleanField(default=False)
 
     class Meta:
         constraints = [
@@ -152,7 +154,7 @@ class Chart(models.Model):
     chart_hash = models.CharField(max_length=40)
     release_date = models.DateTimeField(null=True, blank=True)
     upload_date = models.DateTimeField(null=True, blank=True, auto_now_add=True)
-    density_graph = models.JSONField()
+    analysis = models.JSONField()
     has_attacks = models.BooleanField(default=False)
     objects_count = models.PositiveIntegerField()
     steps_count = models.PositiveIntegerField()

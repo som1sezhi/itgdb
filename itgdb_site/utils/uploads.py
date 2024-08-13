@@ -146,7 +146,9 @@ def upload_song(simfile_dir: SimfileDirectory, p: Pack, image_cache: dict):
             jacket = _get_image(assets['JACKET'], p, image_cache),
             has_bgchanges = bool((sim.bgchanges or '').strip()),
             has_fgchanges = bool((sim.fgchanges or '').strip()),
-            has_attacks = bool((sim.attacks or '').strip())
+            has_attacks = bool((sim.attacks or '').strip()),
+            has_sm = bool(simfile_dir.sm_path),
+            has_ssc = bool(simfile_dir.ssc_path),
         )
 
     for chart in sim.charts:
@@ -176,6 +178,10 @@ def upload_chart(chart: SimfileChart, s: Song, sim: Simfile, chart_len: float):
     chart_hash = get_hash(sim, chart)
     counts = get_counts(sim, chart)
     counts = {k + '_count': v for k, v in counts.items()}
+
+    analysis = {
+        'density_graph': get_density_graph(sim, chart, chart_len)
+    }
     
     s.chart_set.create(
         steps_type = steps_type,
@@ -185,7 +191,7 @@ def upload_chart(chart: SimfileChart, s: Song, sim: Simfile, chart_len: float):
         description = chart.description or '',
         chart_name = chart.get('CHARTNAME', ''),
         chart_hash = chart_hash,
-        density_graph = get_density_graph(sim, chart, chart_len),
+        analysis = analysis,
         release_date = s.release_date,
         has_attacks = bool(chart.get('ATTACKS', '').strip()),
         **counts

@@ -217,8 +217,8 @@ class SongDetailView(generic.DetailView):
             {
                 'id': chart.id,
                 'diff_num': chart.difficulty,
-                'points': chart.density_graph,
-                'peak_nps': max(p[1] for p in chart.density_graph)
+                'points': chart.analysis['density_graph'],
+                'peak_nps': max(p[1] for p in chart.analysis['density_graph'])
             }
             for chart in charts
         ]
