@@ -43,9 +43,23 @@ bucket credentials, etc.). Make sure to set `DEBUG` to 0.
 Then in the project root directory:
 
 ```shell
+docker-compose -f docker-compose.prod.yml pull
 docker-compose -f docker-compose.prod.yml build
 docker-compose -f docker-compose.prod.yml up -d
 ```
+
+## Automating deployment with GitHub Actions
+
+This project uses GitHub Actions to automate deployment to some extent.
+The following repository secrets need to be set:
+
+- `CR_PAT`: a Personal Access Token with `read:packages` and `write:packages` perms
+- `SSH_HOST`: your server
+- `SSH_USERNAME`: the user to log into the server as
+- `SSH_PRIVATE_KEY`: the private key to use for the login ([instructions for setting up the SSh key pair](https://github.com/appleboy/ssh-action?tab=readme-ov-file#setting-up-a-ssh-key))
+
+Additionally, as of current, the workflow expects the location of the project
+on the remote server to be `~/itgdb`.
 
 ## Other commands I found useful in the past
 

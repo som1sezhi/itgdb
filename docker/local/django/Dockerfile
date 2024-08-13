@@ -43,19 +43,6 @@ RUN apt-get update \
     # for downloading megacmd package
     wget
 
-# TODO: remove
-# download megacmd (for fetching files from mega.nz)
-# ENV EXPECTED_HASH=389c388a068896c7911c4ddfc825b44f587eba8f635dbaf61e4ba30bb83abb13
-# RUN wget https://mega.nz/linux/repo/Debian_10.0/amd64/megacmd-Debian_10.0_amd64.deb \
-#     # checksum
-#     && test "$EXPECTED_HASH" = "$(sha256sum megacmd-Debian_10.0_amd64.deb | awk '{print $1}')" \
-#     # install
-#     && apt-get install -y ./megacmd-Debian_10.0_amd64.deb \
-#     # remove downloaded .deb file
-#     && rm ./megacmd-Debian_10.0_amd64.deb \
-#     # set setuid bit (mega-cmd-server requires root privileges)
-#     && chmod u+s $(which mega-cmd-server)
-
 # cleaning up unused files
 RUN apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*

@@ -2,10 +2,9 @@ version: '3.8'
 
 services:
   web:
-    build:
-      context: .
-      dockerfile: ./docker/prod/django/Dockerfile
+    image: ${ITGDB_DJANGO_IMAGE}
     command: /start.sh
+    restart: always
     volumes:
       - uploads:/app/uploads
     expose:
@@ -18,10 +17,9 @@ services:
       - db
 
   celery_worker:
-    build:
-      context: .
-      dockerfile: ./docker/prod/django/Dockerfile
+    image: ${ITGDB_DJANGO_IMAGE}
     command: /start-celeryworker.sh
+    restart: always
     volumes:
       - uploads:/app/uploads
     env_file:
