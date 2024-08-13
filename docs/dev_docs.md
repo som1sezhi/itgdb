@@ -40,6 +40,11 @@ Clone the following files to the following filenames:
 Change the values within these files as appropriate (fill in domain name,
 bucket credentials, etc.). Make sure to set `DEBUG` to 0.
 
+Log into the container registry:
+```shell
+docker login https://ghcr.io
+```
+
 Then in the project root directory:
 
 ```shell
