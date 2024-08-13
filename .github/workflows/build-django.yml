@@ -1,6 +1,9 @@
 name: Publish Django ITGDb image to GitHub Container Registry
 
 on:
+  push:
+    branches:
+      - master
   workflow_dispatch:
 
 env:

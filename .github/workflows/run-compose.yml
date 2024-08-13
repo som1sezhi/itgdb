@@ -7,7 +7,7 @@ on:
       - completed
 
 jobs:
-  push:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,6 +21,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd ~/itgdb
+            git pull
             docker compose -f docker-compose.prod.yml pull \
             && docker compose -f docker-compose.prod.yml build \
             && docker compose -f docker-compose.prod.yml up -d
