@@ -31,7 +31,7 @@ reload.
 You will need a server (with Docker installed), domain name, and S3-compatible
 bucket.
 
-Clone the following files to the following filenames:
+On the server, clone the following files to the following filenames:
 
 - `.env.example` → `.env`
 - `.env.proxy-companion.example` → `.env.proxy-companion`
@@ -40,31 +40,37 @@ Clone the following files to the following filenames:
 Change the values within these files as appropriate (fill in domain name,
 bucket credentials, etc.). Make sure to set `DEBUG` to 0.
 
-Log into the container registry:
+### Automatic deployment with GitHub Actions
+
+This project uses GitHub Actions to automate deployment.
+The following repository secrets need to be set:
+
+- `CR_PAT`: a Personal Access Token with `read:packages` and `write:packages` perms
+- `SSH_HOST`: your server
+- `SSH_USERNAME`: the user to log into the server as
+- `SSH_PRIVATE_KEY`: the private key to use for the login ([instructions for setting up the SSH key pair](https://github.com/appleboy/ssh-action?tab=readme-ov-file#setting-up-a-ssh-key))
+
+Additionally, as of current, the workflow expects the location of the project
+on the remote server to be `~/itgdb`, and for the user to be logged into the
+container registry.
+
 ```shell
 docker login https://ghcr.io
+# Login with GitHub username and personal access token
 ```
 
-Then in the project root directory:
+### Manual deployment
+
+Manual deployment still requires the Django container to be uploaded to the
+container registry.
+
+On the server, in the project root directory:
 
 ```shell
 docker-compose -f docker-compose.prod.yml pull
 docker-compose -f docker-compose.prod.yml build
 docker-compose -f docker-compose.prod.yml up -d
 ```
-
-## Automating deployment with GitHub Actions
-
-This project uses GitHub Actions to automate deployment to some extent.
-The following repository secrets need to be set:
-
-- `CR_PAT`: a Personal Access Token with `read:packages` and `write:packages` perms
-- `SSH_HOST`: your server
-- `SSH_USERNAME`: the user to log into the server as
-- `SSH_PRIVATE_KEY`: the private key to use for the login ([instructions for setting up the SSh key pair](https://github.com/appleboy/ssh-action?tab=readme-ov-file#setting-up-a-ssh-key))
-
-Additionally, as of current, the workflow expects the location of the project
-on the remote server to be `~/itgdb`.
 
 ## Other commands I found useful in the past
 
