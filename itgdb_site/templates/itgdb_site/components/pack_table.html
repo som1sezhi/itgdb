@@ -8,6 +8,7 @@ Recognized context variables:
 Requires tables.css to be loaded.
 {% endcomment %}
 
+{% if packs %}
 <div class="table-responsive mb-4 floating-scroll">
   <table class="table align-middle text-center rounded overflow-hidden mb-2">
     <thead>
@@ -100,9 +101,12 @@ Requires tables.css to be loaded.
       </tr>
     {% endfor %}
     </tbody>
-
-    {% if not packs %}
-      <caption class="text-center text-muted fst-italic">No packs!</caption>
-    {% endif %}
   </table>
 </div>
+{% else %}
+<div class="row my-4 px-2">
+  <div class="col border-top border-bottom p-2 text-center text-muted fst-italic">
+    No packs!
+  </div>
+</div>
+{% endif %}

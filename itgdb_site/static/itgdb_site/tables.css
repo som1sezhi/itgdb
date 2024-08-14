@@ -1,5 +1,5 @@
 .bn-col {
-    width: calc(var(--itgdb-row-height) * 2.56 + 0.5em);
+    width: calc(var(--itgdb-row-height) * (418/164) + 0.5em);
 }
 
 td.bn-cell {
@@ -8,7 +8,8 @@ td.bn-cell {
 }
 
 td.bn-cell img {
-    height: 100%;
+    width: calc(var(--itgdb-row-height) * (418/164));
+    height: var(--itgdb-row-height);
 }
 
 .item-name-col {

@@ -9,6 +9,7 @@ Recognized context variables:
 Requires tables.css to be loaded.
 {% endcomment %}
 
+{% if songs %}
 <div class="table-responsive mb-4 {% if not is_pack_detail %}floating-scroll{% endif %}">
   <table class="table align-middle text-center rounded overflow-hidden mb-2"
     {% if is_pack_detail %} {# make table sortable #}
@@ -153,9 +154,12 @@ Requires tables.css to be loaded.
       </tr>
     {% endfor %}
     </tbody>
-
-    {% if not songs %}
-      <caption class="text-center text-muted fst-italic">No songs!</caption>
-    {% endif %}
   </table>
 </div>
+{% else %}
+<div class="row my-4 px-2">
+  <div class="col border-top border-bottom p-2 text-center text-muted fst-italic">
+    No songs!
+  </div>
+</div>
+{% endif %}

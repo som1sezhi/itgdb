@@ -138,7 +138,7 @@
 <div class="tab-content" id="chartTabsContent">
 {% for chart, data in charts %}
   <div 
-    class="p-3 tab-pane row"
+    class="p-3 tab-pane"
     id="chart-{{ chart.id }}-panel"
     role="tabpanel" aria-labelledby="home-tab">
     <div class="row mb-3">
@@ -230,7 +230,7 @@
     </div>
 
     <h4>Other releases of this chart</h4>
-    <div class="row pb-1">
+    <div class="pb-1">
     {% include 'itgdb_site/components/chart_table.html' with charts=data.other_releases %}
     </div>
   </div>

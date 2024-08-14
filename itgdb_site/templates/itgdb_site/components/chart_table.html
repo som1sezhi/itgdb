@@ -7,6 +7,7 @@ Recognized context variables:
 Requires tables.css to be loaded.
 {% endcomment %}
 
+{% if charts %}
 <div class="table-responsive mb-4 floating-scroll">
   <table class="table align-middle text-center rounded overflow-hidden mb-2">
     <thead>
@@ -88,3 +89,10 @@ Requires tables.css to be loaded.
     {% endif %}
   </table>
 </div>
+{% else %}
+<div class="row mt-3 mb-4 px-2">
+  <div class="col border-top border-bottom p-2 text-center text-muted fst-italic">
+    No charts!
+  </div>
+</div>
+{% endif %}
