@@ -2,5 +2,5 @@ __pycache__
 .git
 .venv/
 uploads/
-logs/
+log/
 .env*
