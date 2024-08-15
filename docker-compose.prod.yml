@@ -55,6 +55,7 @@ services:
       - html:/usr/share/nginx/html
       - vhost:/etc/nginx/vhost.d
       - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./log/nginx:/var/log/nginx
     depends_on:
       - web
     
