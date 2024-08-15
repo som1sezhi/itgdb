@@ -28,10 +28,14 @@ reload.
 
 ## Production setup
 
-You will need a server (with Docker installed), domain name, and S3-compatible
-bucket.
+You will need a server (with Docker installed), domain name, S3-compatible
+bucket, and GitHub account. You will need to fork this repository onto
+your own account.
 
-On the server, clone the following files to the following filenames:
+### Server setup
+
+On the server, clone your repository to `~/itgdb`. Then copy the following files
+to the following filenames:
 
 - `.env.example` → `.env`
 - `.env.proxy-companion.example` → `.env.proxy-companion`
@@ -40,36 +44,46 @@ On the server, clone the following files to the following filenames:
 Change the values within these files as appropriate (fill in domain name,
 bucket credentials, etc.). Make sure to set `DEBUG` to 0.
 
-### Automatic deployment with GitHub Actions
-
-This project uses GitHub Actions to automate deployment.
-The following repository secrets need to be set:
-
-- `CR_PAT`: a Personal Access Token with `read:packages` and `write:packages` perms
-- `SSH_HOST`: your server
-- `SSH_USERNAME`: the user to log into the server as
-- `SSH_PRIVATE_KEY`: the private key to use for the login ([instructions for setting up the SSH key pair](https://github.com/appleboy/ssh-action?tab=readme-ov-file#setting-up-a-ssh-key))
-
-Additionally, as of current, the workflow expects the location of the project
-on the remote server to be `~/itgdb`, and for the user to be logged into the
-container registry.
+Then, log into GitHub Container Registry on the server so Docker can pull
+the Django container image during the deployment process:
 
 ```shell
 docker login https://ghcr.io
 # Login with GitHub username and personal access token
 ```
 
+### Deployment setup
+
+This project uses GitHub Actions to automate deployment. In order for the
+workflow to function, the following repository secrets need to be set:
+
+- `CR_PAT`: a Personal Access Token with `read:packages` and `write:packages` perms
+- `SSH_HOST`: your server
+- `SSH_USERNAME`: the user to log into the server as
+- `SSH_PRIVATE_KEY`: the private key to use for the login ([instructions for setting up the SSH key pair](https://github.com/appleboy/ssh-action?tab=readme-ov-file#setting-up-a-ssh-key))
+
+## Production deployment
+
+### Automatic deployment
+
+If everything is set up correctly, pushing to `master` will start the deployment
+workflow. This workflow is comprised of two stages:
+- Build and upload the Django Docker container image to GitHub Container Registry
+- SSH into the server and run Docker Compose
+
 ### Manual deployment
 
-Manual deployment still requires the Django container to be uploaded to the
-container registry.
+You can manually run the deployment workflow via the `workflow_dispatch` event
+trigger. On GitHub, go to the Actions tab, click the name of the workflow on the
+left sidebar, and then click the Run Workflow button.
 
-On the server, in the project root directory:
+If you do not wish to build and upload the Django container, you can run the
+Docker Compose commands on the server manually:
 
 ```shell
-docker-compose -f docker-compose.prod.yml pull
-docker-compose -f docker-compose.prod.yml build
-docker-compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 ## Other commands I found useful in the past
