@@ -15,7 +15,18 @@ def get_simfilemedia_storage():
 
 class ImageFile(models.Model):
     pack = models.ForeignKey('Pack', on_delete=models.CASCADE, blank=True, null=True)
+    song = models.ForeignKey('Song', on_delete=models.CASCADE, blank=True, null=True)
     image = models.ImageField(storage=get_simfilemedia_storage)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=~(
+                    models.Q(pack__isnull=False) & models.Q(song__isnull=False)
+                ),
+                name='cannot_belong_to_both_pack_and_single'
+            )
+        ]
 
     def __str__(self):
         splits = self.image.name.split("_", 1)

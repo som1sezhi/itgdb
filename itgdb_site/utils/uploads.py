@@ -16,9 +16,9 @@ from sorl.thumbnail import get_thumbnail
 
 from ..models import Pack, Song, Chart, ImageFile
 from .charts import (
-    get_hash, get_counts, get_density_graph, get_assets, get_pack_banner_path,
-    get_song_lengths
+    get_hash, get_assets, get_pack_banner_path, get_song_lengths
 )
+from .analysis import SongAnalyzer
 
 logger = get_task_logger('itgdb_site.tasks')
 
@@ -29,7 +29,7 @@ ProgressTrackingInfo = namedtuple(
 )
 
 
-def _get_image(path, pack, cache, generate_thumbnail=False):
+def _get_image(path, parent_obj, cache, generate_thumbnail=False):
     if not path or not os.path.isfile(path):
         return None
     if path in cache:
@@ -51,10 +51,16 @@ def _get_image(path, pack, cache, generate_thumbnail=False):
     if img_path:
         with open(img_path, 'rb') as f:
             base_filename = os.path.basename(img_path)
-            img_file = ImageFile(
-                pack = pack,
-                image = File(f, name=f'{uuid.uuid4()}_{base_filename}')
-            )
+            if isinstance(parent_obj, Pack):
+                img_file = ImageFile(
+                    pack = parent_obj,
+                    image = File(f, name=f'{uuid.uuid4()}_{base_filename}')
+                )
+            else: # parent_obj is a Song
+                img_file = ImageFile(
+                    song = parent_obj,
+                    image = File(f, name=f'{uuid.uuid4()}_{base_filename}')
+                )
             img_file.save()
             if generate_thumbnail:
                 # pregenerate thumbnail
@@ -101,18 +107,27 @@ def upload_pack(
         upload_song(simfile_dir, p, image_cache)
 
 
-def upload_song(simfile_dir: SimfileDirectory, p: Pack, image_cache: dict):
+def upload_song(
+    simfile_dir: SimfileDirectory,
+    p: Pack | None = None,
+    image_cache: dict | None = None
+):
+    if image_cache is None:
+        image_cache = {}
+
     sim = simfile_dir.open()
     assets = get_assets(simfile_dir)
     sim_path = simfile_dir.simfile_path
     sim_filename = os.path.basename(sim_path)
 
-    logger.info(f'Processing {p.name}/{sim.title}')
+    logger.info(f'Processing {p.name if p else "<single>"}/{sim.title}')
+
+    song_analyzer = SongAnalyzer(sim)
 
     music_path = assets['MUSIC']
     if not music_path:
         return
-    song_lengths = get_song_lengths(music_path, sim)
+    song_lengths = get_song_lengths(music_path, song_analyzer)
     if not song_lengths:
         return
     music_len, chart_len = song_lengths
@@ -125,7 +140,8 @@ def upload_song(simfile_dir: SimfileDirectory, p: Pack, image_cache: dict):
     sim_uuid = uuid.uuid4()
 
     with open(sim_path, 'rb') as f:
-        s = p.song_set.create(
+        s = Song(
+            pack = p,
             title = sim.title,
             subtitle = sim.subtitle,
             artist = sim.artist,
@@ -138,24 +154,27 @@ def upload_song(simfile_dir: SimfileDirectory, p: Pack, image_cache: dict):
             min_display_bpm = disp_range[0],
             max_display_bpm = disp_range[1],
             length = music_len,
-            release_date = p.release_date,
+            release_date = p.release_date if p else None,
             simfile = File(f, name=f'{sim_uuid}_{sim_filename}'),
-            banner = _get_image(assets['BANNER'], p, image_cache, True),
-            bg = _get_image(assets['BACKGROUND'], p, image_cache, True),
-            cdtitle = _get_image(assets['CDTITLE'], p, image_cache),
-            jacket = _get_image(assets['JACKET'], p, image_cache),
             has_bgchanges = bool((sim.bgchanges or '').strip()),
             has_fgchanges = bool((sim.fgchanges or '').strip()),
             has_attacks = bool((sim.attacks or '').strip()),
             has_sm = bool(simfile_dir.sm_path),
             has_ssc = bool(simfile_dir.ssc_path),
         )
+        s.save()
+        img_parent = p or s
+        s.banner = _get_image(assets['BANNER'], img_parent, image_cache, True)
+        s.bg = _get_image(assets['BACKGROUND'], img_parent, image_cache, True)
+        s.cdtitle = _get_image(assets['CDTITLE'], img_parent, image_cache)
+        s.jacket = _get_image(assets['JACKET'], img_parent, image_cache)
+        s.save()
 
     for chart in sim.charts:
-        upload_chart(chart, s, sim, chart_len)
+        upload_chart(chart, s, song_analyzer)
 
 
-def upload_chart(chart: SimfileChart, s: Song, sim: Simfile, chart_len: float):
+def upload_chart(chart: SimfileChart, s: Song, song_analyzer: SongAnalyzer):
     steps_type = Chart.steps_type_to_int(chart.stepstype)
     if steps_type is None:
         # ignore charts with unsupported stepstype
@@ -175,12 +194,14 @@ def upload_chart(chart: SimfileChart, s: Song, sim: Simfile, chart_len: float):
         # apparently it's possible for the meter to not be a
         # number -- use -1 as a placeholder/fallback
         meter = -1
-    chart_hash = get_hash(sim, chart)
-    counts = get_counts(sim, chart)
-    counts = {k + '_count': v for k, v in counts.items()}
+    
+    chart_hash = get_hash(song_analyzer.sim, chart)
 
+    analyzer = song_analyzer.get_chart_analyzer(chart)
+    counts = analyzer.get_counts()
+    counts = {k + '_count': v for k, v in counts.items()}
     analysis = {
-        'density_graph': get_density_graph(sim, chart, chart_len)
+        'density_graph': analyzer.get_density_graph()
     }
     
     s.chart_set.create(
