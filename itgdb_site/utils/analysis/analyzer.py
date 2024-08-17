@@ -4,7 +4,7 @@ My main reason for using classes here is so that I can more easily cache certain
 expensive-to-compute results, hence the @cached_property decorators.
 """
 
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from collections import namedtuple
 from functools import cached_property
 from math import isclose
@@ -13,7 +13,7 @@ from simfile.types import Chart, Simfile
 from simfile.notes import NoteData, NoteType, Note
 from simfile.notes.group import group_notes, SameBeatNotes, OrphanedNotes, NoteWithTail
 from simfile.notes.count import *
-from simfile.timing import TimingData, BeatValues, Beat
+from simfile.timing import TimingData, BeatValues, BeatValue, Beat
 from simfile.timing.engine import TimingEngine
 
 
@@ -86,12 +86,25 @@ class ChartAnalyzer:
         self.song_analyzer = song_analyzer
 
     @cached_property
-    def fake_segments(self) -> BeatValues:
+    def fake_segments(self) -> List[BeatValue]:
         # use .get() to handle SMChart/SMSimfile gracefully
         fakes_str = self.chart.get('FAKES') or self.sim.get('FAKES')
         if fakes_str:
-            return BeatValues.from_str(fakes_str)
-        return BeatValues()
+            fake_segs = BeatValues.from_str(fakes_str)
+            # observed behavior from experimenting with the game:
+            # - game will handle out-of-order fake segments just fine
+            # - negative beat values work properly
+            # - negative segment lengths act like 0 length
+            # - if segment length is < ~1/96, it effectively doesn't exist
+            #   - the exact value is between 0.01041666744 and 0.01041666745,
+            #     though at this point we're basically running into float
+            #     imprecision so idk. i think it's alright to just call it 1/96
+            # - if fake segments overlap, the fake region ends at the ending
+            #   point of the later segment
+            fake_segs = [seg for seg in fake_segs if seg.value >= 1/96]
+            fake_segs.sort(key=lambda seg: seg.beat)
+            return fake_segs
+        return []
 
     @cached_property
     def hittables(self) -> List[Note]:
@@ -104,18 +117,25 @@ class ChartAnalyzer:
         # the notedata iteration process multiple times. i don't think the 
         # memory cost will be super bad either (1M notes will take up around 
         # 88 MB if my math is correct)
-        return list(filter(
-            lambda note: \
-                # keep all tails to avoid orphaning hold heads whose tails are in
-                # a fake segment.
-                # any orphaned tails will be dropped later by the counting functions
-                note.note_type == NoteType.TAIL or \
-                (
-                    self.engine.hittable(note.beat) and \
-                    not self._is_in_fake_segment(note.beat)
-                ),
-            self.notes
-        ))
+        def generator():
+            start_idx = -1
+            for note in self.notes:
+                if note.note_type == NoteType.TAIL:
+                    # keep all tails to avoid orphaning hold heads whose tails
+                    # are in a fake segment.
+                    # any orphaned tails will be dropped later by the
+                    # counting functions
+                    yield note
+                elif not self.engine.hittable(note.beat):
+                    continue
+                else:
+                    in_fake_seg, start_idx = self._is_in_fake_segment(
+                        note.beat, start_idx
+                    )
+                    if not in_fake_seg:
+                        yield note
+
+        return list(generator())
 
     @cached_property
     def notes_per_measure(self) -> List[int]:
@@ -161,11 +181,29 @@ class ChartAnalyzer:
             pass
         return last_note.beat
 
-    def _is_in_fake_segment(self, beat: Beat) -> bool:
-        return any(
-            seg.beat <= beat < seg.beat + Fraction(seg.value)
-            for seg in self.fake_segments
-        )
+    def _is_in_fake_segment(
+            self, beat: Beat, start_idx: int
+    ) -> Tuple[bool, int]:
+        """Checks whether the given beat lands within a fake segment.
+
+        start_idx is the index into self.fake_segments where we should start
+        searching. start_idx must be <= the index of the last segment with
+        start time <= the given beat. start_idx should initially be -1
+        (meaning no fake segments are before the given beat).
+
+        Returns the result of the check, and a new value of start_idx to use
+        for next time.
+        """
+        # advance start_idx to the last segment with start time <= beat
+        while start_idx < len(self.fake_segments) - 1 \
+            and self.fake_segments[start_idx + 1].beat <= beat:
+            start_idx += 1
+        result = False
+        if start_idx >= 0:
+            # check if inside this segment
+            seg = self.fake_segments[start_idx]
+            result = beat < seg.beat + Fraction(seg.value)
+        return result, start_idx
     
     def _count_hands(self) -> int:
         """Count hands according to StepMania's counting behavior."""
@@ -187,6 +225,7 @@ class ChartAnalyzer:
 
         tail_beats = [None] * self.notes.columns
         hands_count = 0
+        fake_seg_start_idx = -1
         for group in grouped_notes:
             cur_beat = group[0].beat
             # clear tails that have passed
@@ -194,8 +233,12 @@ class ChartAnalyzer:
                 if tail_beat and tail_beat < cur_beat:
                     tail_beats[i] = None
             # skip if notes are unhittable on this beat
-            if not self.engine.hittable(cur_beat) or \
-                self._is_in_fake_segment(cur_beat):
+            if not self.engine.hittable(cur_beat):
+                continue
+            in_fake_seg, fake_seg_start_idx = self._is_in_fake_segment(
+                cur_beat, fake_seg_start_idx
+            )
+            if in_fake_seg:
                 continue
             # detect and count hands
             active_holds_count = sum(t is not None for t in tail_beats)

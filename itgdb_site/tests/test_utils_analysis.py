@@ -53,3 +53,25 @@ class GetCountsTestClass(SimpleTestCase):
                 'fakes': 2
             }
         )
+    
+    def test_weird_fake_regions(self):
+        # test for correct handling of fake region edge cases:
+        # - out-of-order fake regions in file should act the same as in-order
+        # - fake regions with negative beat should work properly
+        # - overlapping fake region should "cut off" a previous fake region
+        # - regions with too-small/zero/negative length should act nonexistent
+        self._do_test(
+            'test_weird_fake_regions',
+            {
+                'objects': 11,
+                'steps': 6,
+                'combo': 6,
+                'jumps': 0,
+                'mines': 0,
+                'hands': 0,
+                'holds': 0,
+                'rolls': 0,
+                'lifts': 0,
+                'fakes': 0
+            }
+        )
