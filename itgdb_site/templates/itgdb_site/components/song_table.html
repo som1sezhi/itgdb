@@ -84,14 +84,14 @@ Requires tables.css to be loaded.
             <span class="fst-italic text-muted">Unknown</span>
           {% endif %}
           <br />
-          {{ song.length|duration }}
+          {{ song.chart_length|duration }}
           <span class="opacity-25">|</span>
           <span class="opacity-50">BPM</span>
           {{ song|display_bpm }}
         </td>
         {% else %}
         <td>
-          <span data-sort-key="{{ song.length }}">{{ song.length|duration }}</span>
+          <span data-sort-key="{{ song.chart_length }}">{{ song.chart_length|duration }}</span>
         </td>
 
         <td>

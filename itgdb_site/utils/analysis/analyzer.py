@@ -70,6 +70,9 @@ class SongAnalyzer:
     
     def get_chart_analyzer(self, chart: Chart) -> 'ChartAnalyzer':
         return self.chart_analyzers[self._chart_key(chart)]
+    
+    def get_chart_len(self):
+        return self.chart_len
 
 
 class ChartAnalyzer:

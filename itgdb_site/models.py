@@ -82,7 +82,8 @@ class Song(models.Model):
     max_bpm = models.FloatField()
     min_display_bpm = models.FloatField(null=True, blank=True)
     max_display_bpm = models.FloatField(null=True, blank=True)
-    length = models.FloatField()
+    music_length = models.FloatField() # should be equiv. to MusicLengthSeconds
+    chart_length = models.FloatField() # should be equiv. to GetLastSecond
     release_date = models.DateTimeField(null=True, blank=True)
     upload_date = models.DateTimeField(null=True, blank=True, auto_now_add=True)
     links = models.TextField(blank=True, default='')

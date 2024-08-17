@@ -4,6 +4,7 @@ import zipfile
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.db import transaction
+import simfile
 from simfile.dir import SimfilePack
 from celery import shared_task
 from celery.signals import task_postrun
@@ -14,6 +15,8 @@ import patoolib
 
 from .utils.uploads import upload_pack, ProgressTrackingInfo
 from .utils.url_fetch import fetch_from_url
+from .utils.analysis import SongAnalyzer
+from .models import Song
 
 logger = get_task_logger(__name__)
 channel_layer = get_channel_layer()
@@ -191,3 +194,33 @@ def process_pack_from_web(self, pack_data_list, source_link):
                 )
     finally:
         shutil.rmtree(extract_path)
+
+
+@shared_task(bind=True)
+def update_analyses(self, form_data):
+    which = form_data['which']
+    prog_tracker = ProgressTracker(self)
+    song_count = Song.objects.count()
+
+    # if no fields are specified, update nothing
+    if not which:
+        return
+
+    for i, song in enumerate(Song.objects.all()):
+        prog_tracker.update_progress(
+            i / song_count, f'[{i + 1}/{song_count}] Updating {str(song)}'
+        )
+
+        file = song.simfile
+        try:
+            with file.open(mode='r') as f:
+                sim = simfile.load(f)
+                song_analyzer = SongAnalyzer(sim)
+
+                if 'chart_length' in which:
+                    chart_len = song_analyzer.get_chart_len()
+                    song.chart_length = chart_len
+        except FileNotFoundError:
+            continue
+        
+        song.save()

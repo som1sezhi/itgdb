@@ -27,6 +27,15 @@ class BatchUploadForm(forms.Form):
     file = forms.FileField(label='CSV file')
 
 
+class UpdateAnalysesForm(forms.Form):
+    which = forms.MultipleChoiceField(
+        label='Choose which fields to update:',
+        choices={
+            'chart_length': 'chart_length',
+        }
+    )
+
+
 class PackSearchForm(forms.Form):
     q = forms.CharField(
         label='',

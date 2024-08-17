@@ -117,7 +117,6 @@ def _get_full_validated_asset_path(sim_dir_path: str, path: str):
     )
     
     # ensure path exists and does not point outside the pack
-    #print(full_path, pack_path)
     if full_path and full_path.startswith(pack_path):
         # ensure path is a file
         if os.path.isfile(full_path):
@@ -149,9 +148,6 @@ def get_assets(simfile_dir: SimfileDirectory) -> Dict[str, str | None]:
 
     sim = simfile_dir.open()
     sim_dir_path = os.path.normpath(simfile_dir.simfile_dir)
-
-    #print('====================', _get_full_validated_asset_path(sim_dir_path, sim.get('BANNER')))
-    #print(sim_dir_path, sim.get('BANNER'))
 
     # first, try to populate fields using the simfile's fields
     assets = {
@@ -278,7 +274,5 @@ def get_song_lengths(
 
     music_len = float(completed_process.stdout)
 
-    chart_end = song_analyzer.chart_len
+    chart_end = song_analyzer.get_chart_len()
     return max(music_len, chart_end), chart_end
-
-
