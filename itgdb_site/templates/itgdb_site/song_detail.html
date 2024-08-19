@@ -152,6 +152,12 @@
             <canvas id="densityChart{{ chart.id }}"></canvas>
           </div>
         </div>
+        <div class="row ps-3 figure-caption">
+          Streams:
+        </div>
+        <div class="row ps-4 mb-1 figure-caption" id="breakdown-{{ chart.id }}">
+          unknown
+        </div>
       </div>
       <div class="col-12 col-sm-6">
         <table class="table table-sm info-table">
@@ -240,10 +246,14 @@
 
 {% block script_extra %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
-{{ density_data|json_script }}
+{{ stream_info|json_script:"streamInfoJson" }}
+{{ density_data|json_script:"densityDataJson" }}
 <script type="text/javascript">
-  // https://github.com/twbs/bootstrap/issues/25220#issuecomment-535915733
   $(document).ready(() => {
+    'use strict';
+
+    // automatic tab switching based on url ===================================
+    // https://github.com/twbs/bootstrap/issues/25220#issuecomment-535915733
     const url = window.location.href;
 
     function switchTab() {
@@ -264,88 +274,223 @@
       const newUrl = url.split('#')[0] + hash;
       history.replaceState(null, null, newUrl);
     });
-  });
 
-  // density charts
-  let ch;
-  const densityData = JSON.parse(
-    document.currentScript.previousElementSibling.textContent
-  );
-  const diffColors = [];
-  const docStyle = getComputedStyle(document.documentElement);
-  for (let i = 0; i < 6; i++) {
-    const col = `rgba(${docStyle.getPropertyValue(`--itgdb-diff-${i}`)}, 0.8)`;
-    diffColors.push(col);
-  }
-  // const peaks = densityData.map((d) => d.peak_nps);
-  // const yMax = peaks.reduce((a, b) => Math.max(a, b), 0);
-  for (const chartData of densityData) {
-    const ctx = document.getElementById(`densityChart${chartData.id}`);
-    const data = {
-      datasets: [{
-        fill: 'origin',
-        showLine: true,
-        data: chartData.points.map(([x, y]) => ({x, y})),
-        backgroundColor: diffColors[chartData.diff_num]
-      }]
-    };
+    // density charts =========================================================
+    const densityData = JSON.parse($('#densityDataJson').text());
 
-    const chart = new Chart(ctx, {
-      type: 'scatter',
-      data: data,
-      options: {
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            type: 'linear',
-            position: 'bottom',
-            min: chartData.points[0][0],
-            max: chartData.points[chartData.points.length - 1][0],
-            ticks: {
+    const diffColors = [];
+    const docStyle = getComputedStyle(document.documentElement);
+    for (let i = 0; i < 6; i++) {
+      const col = `rgba(${docStyle.getPropertyValue(`--itgdb-diff-${i}`)}, 0.8)`;
+      diffColors.push(col);
+    }
+
+    // const peaks = densityData.map((d) => d.peak_nps);
+    // const yMax = peaks.reduce((a, b) => Math.max(a, b), 0);
+    for (const chartData of densityData) {
+      const ctx = $(`#densityChart${chartData.id}`)[0];
+      const data = {
+        datasets: [{
+          fill: 'origin',
+          showLine: true,
+          data: chartData.points.map(([x, y]) => ({x, y})),
+          backgroundColor: diffColors[chartData.diff_num]
+        }]
+      };
+
+      const chart = new Chart(ctx, {
+        type: 'scatter',
+        data: data,
+        options: {
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              type: 'linear',
+              position: 'bottom',
+              min: chartData.points[0][0],
+              max: chartData.points[chartData.points.length - 1][0],
+              ticks: {
+                display: false,
+              }
+            },
+            y: {
+              max: chartData.peak_nps,
+              ticks: {
+                display: false,
+              }
+            }
+          },
+          elements: {
+            point: {
+              pointStyle: false,
+            },
+            line: {
+              borderWidth: 1,
+            }
+          },
+          animation: {
+            duration: 0,
+          },
+          plugins: {
+            legend: {
               display: false,
+            },
+            tooltip: {
+              animation: {
+                duration: 150,
+              }
             }
           },
-          y: {
-            max: chartData.peak_nps,
-            ticks: {
-              display: false,
-            }
-          }
-        },
-        elements: {
-          point: {
-            pointStyle: false,
-          },
-          line: {
-            borderWidth: 1,
-          }
-        },
-        animation: {
-          duration: 0,
-        },
-        plugins: {
-          legend: {
-            display: false,
-          },
-          tooltip: {
-            animation: {
-              duration: 150,
-            }
-          }
-        },
+        }
+      });
+
+      $(document).on('themeChanged', (e) => {
+        const c = e.detail === 'light' ? '#444' : '#bbb';
+        const b = e.detail === 'light' ? '#00000010' : '#ffffff10';
+        chart.options.plugins.legend.labels.color = c;
+        chart.options.scales.x.ticks.color = c;
+        chart.options.scales.y.ticks.color = c;
+        chart.options.scales.x.grid.color = b;
+        chart.options.scales.y.grid.color = b;
+        chart.update();
+      });
+    }
+
+    // stream info ============================================================
+    const MAX_BREAKDOWN_SEGMENTS = 24;
+
+    // generate breakdowns at various levels of simplification.
+    // if a breakdown requires displaying greater than MAX_BREAKDOWN_SEGMENTS
+    // segments, return null instead, to indicate that the next simpliest
+    // breakdown should be used instead
+
+    // specify all runs, and all breaks longer than 1 measure
+    function genFullBreakdown(streamInfo) {
+      if (streamInfo.segments.length > MAX_BREAKDOWN_SEGMENTS)
+        return null;
+
+      const multiplier = streamInfo.quant / 16;
+      const breakdownParts = [];
+      for (const seg of streamInfo.segments) {
+        const len = Math.floor(Math.abs(seg) * multiplier);
+        const isStream = seg > 0;
+        breakdownParts.push(isStream ? len.toString() : `(${len})`);
       }
-    });
-    ch = chart;
-    document.documentElement.addEventListener('themeChanged', (e) => {
-      const c = e.detail === 'light' ? '#444' : '#bbb';
-      const b = e.detail === 'light' ? '#00000010' : '#ffffff10';
-      chart.options.plugins.legend.labels.color = c;
-      chart.options.scales.x.ticks.color = c;
-      chart.options.scales.y.ticks.color = c;
-      chart.options.scales.x.grid.color = b;
-      chart.options.scales.y.grid.color = b;
-      chart.update();
-    });
-  }
+      return breakdownParts.join(' ');
+    }
+
+    // represent breaks with symbols:
+    // '-': 2-4 measures
+    // '/': 5-31 measures
+    // '|': >=32 measures
+    // partially simplified:
+    //   breaks of 1 measure are accumulated into broken stream
+    // fully simplified:
+    //   all '-' breaks are accumulated into broken stream
+    function genSimplifiedBreakdown(streamInfo, fullSimplify) {
+      const segs = streamInfo.segments;
+      const multiplier = streamInfo.quant / 16;
+      const breakdownParts = [];
+      let accumStream = 0; // measured in original chart measures
+      let isBroken = false;
+      for (let i = 0; i < segs.length; i++) {
+        if (breakdownParts.length >= MAX_BREAKDOWN_SEGMENTS)
+          return null;
+        
+        const seg = segs[i];
+        const isStream = seg > 0;
+        if (isStream) {
+          accumStream += seg;
+          // if previous segment was also stream, this indicates a broken
+          // stream. mark as broken, and add 1 for the measure break
+          if (i > 0 && segs[i - 1] > 0) {
+            accumStream += 1;
+            isBroken = true;
+          }
+        } else { // if this is a break
+          const breakLen = -seg;
+          let adjustedBreakLen = breakLen * multiplier;
+
+          // if the break is short enough, merge it into the previous
+          // stream segment instead of ending the stream segment
+          if (fullSimplify && adjustedBreakLen < 5) {
+            accumStream += breakLen;
+            isBroken = true;
+          } else {
+            // output the previous stream segment
+            const streamLen = Math.floor(accumStream * multiplier);
+            let part = streamLen.toString();
+            if (isBroken)
+              part += '*';
+            
+            console.log(adjustedBreakLen);
+            
+            // output the break
+            if (adjustedBreakLen < 5)
+              part += '-';
+            else if (adjustedBreakLen < 32)
+              part += '/';
+            else
+              part += '|';
+            breakdownParts.push(part);
+
+            // reset
+            accumStream = 0;
+            isBroken = false;
+          }
+          
+        }
+      }
+
+      // we are about to add one more segment for the remaining stream left
+      // in accumStream.
+      // check if that would make the breakdown too long
+      if (breakdownParts.length == MAX_BREAKDOWN_SEGMENTS)
+        return null;
+      // add the remaining segment
+      const streamLen = Math.floor(accumStream * multiplier);
+      let part = streamLen.toString();
+      if (isBroken)
+        part += '*';
+      breakdownParts.push(part);
+      console.log(breakdownParts);
+      return breakdownParts.join('');
+    }
+
+    const streamInfoList = JSON.parse($('#streamInfoJson').text());
+    for (const streamInfo of streamInfoList) {
+      // skip if stream info hasn't been generated yet
+      if (!streamInfo.segments)
+        continue;
+      
+      if (streamInfo.segments.length > 0) {
+        console.log(streamInfo);
+        let breakdown = genFullBreakdown(streamInfo);
+        if (!breakdown)
+          breakdown = genSimplifiedBreakdown(streamInfo, false);
+        if (!breakdown)
+          breakdown = genSimplifiedBreakdown(streamInfo, true);
+        if (!breakdown)
+          breakdown = `${streamInfo.total_stream} total`
+        
+        if (streamInfo.quant !== 16) {
+          const bpms = streamInfo.bpms;
+          const multiplier = streamInfo.quant / 16;
+          const adjustedBpms = [
+            Math.round(bpms[0] * multiplier),
+            Math.round(bpms[1] * multiplier)
+          ];
+          if (adjustedBpms[0] === adjustedBpms[1] || bpms[1] - bpms[0] < 1e-9)
+            breakdown += ` @ ${adjustedBpms[1]}`;
+          else
+            breakdown += ` @ ${adjustedBpms[0]}-${adjustedBpms[1]}`;
+        }
+
+        $(`#breakdown-${streamInfo.id}`).text(breakdown);
+      } else {
+        $(`#breakdown-${streamInfo.id}`).text('No streams');
+      }
+    }
+  });
 </script>
 {% endblock %}

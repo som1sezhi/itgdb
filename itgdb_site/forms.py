@@ -32,6 +32,7 @@ class UpdateAnalysesForm(forms.Form):
         label='Choose which fields to update:',
         choices={
             'chart_length': 'chart_length',
+            'stream_info': 'stream_info',
         }
     )
 

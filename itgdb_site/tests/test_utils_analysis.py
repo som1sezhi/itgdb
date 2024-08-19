@@ -75,3 +75,89 @@ class GetCountsTestClass(SimpleTestCase):
                 'fakes': 0
             }
         )
+
+
+class GetStreamInfoTestClass(SimpleTestCase):
+    def _do_test(self, test_name, expected):
+        sim, chart = open_test_chart(f'GetStreamInfo_{test_name}.sm')
+        chart_analyzer = SongAnalyzer(sim).get_chart_analyzer(chart)
+        actual = chart_analyzer.get_stream_info()
+        for k in ('segments', 'quant', 'total_stream', 'total_break'):
+            self.assertEqual(expected[k], actual[k])
+        if expected['bpms'] == [None, None]:
+            self.assertEqual(expected['bpms'], actual['bpms'])
+        else:
+            for i in range(2):
+                self.assertAlmostEqual(expected['bpms'][i], actual['bpms'][i])
+    
+    def test_normal(self):
+        self._do_test(
+            'test_normal',
+            {
+                'segments': [1, -2, 3, -3, 1, 2],
+                'quant': 16,
+                'bpms': [120, 120],
+                'total_stream': 7,
+                'total_break': 6
+            }
+        )
+    
+    def test_no_stream(self):
+        self._do_test(
+            'test_no_stream',
+            {
+                'segments': [],
+                'quant': 16,
+                'bpms': [None, None],
+                'total_stream': 0,
+                'total_break': 0
+            }
+        )
+    
+    def test_20ths(self):
+        self._do_test(
+            'test_20ths',
+            {
+                'segments': [1, 1],
+                'quant': 20,
+                'bpms': [120, 120],
+                'total_stream': 2,
+                'total_break': 1
+            }
+        )
+    
+    def test_24ths(self):
+        self._do_test(
+            'test_24ths',
+            {
+                'segments': [1, 1],
+                'quant': 24,
+                'bpms': [120, 120],
+                'total_stream': 2,
+                'total_break': 1
+            }
+        )
+    
+    def test_32nds(self):
+        self._do_test(
+            'test_32nds',
+            {
+                'segments': [1, 1],
+                'quant': 32,
+                'bpms': [120, 120],
+                'total_stream': 2,
+                'total_break': 1
+            }
+        )
+    
+    def test_varying_bpm(self):
+        self._do_test(
+            'test_varying_bpm',
+            {
+                'segments': [1, 2, 1],
+                'quant': 24,
+                'bpms': [100, 210],
+                'total_stream': 4,
+                'total_break': 2
+            }
+        )

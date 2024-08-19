@@ -202,7 +202,8 @@ def upload_chart(chart: SimfileChart, s: Song, song_analyzer: SongAnalyzer):
     counts = analyzer.get_counts()
     counts = {k + '_count': v for k, v in counts.items()}
     analysis = {
-        'density_graph': analyzer.get_density_graph()
+        'density_graph': analyzer.get_density_graph(),
+        'stream_info': analyzer.get_stream_info(),
     }
     
     s.chart_set.create(

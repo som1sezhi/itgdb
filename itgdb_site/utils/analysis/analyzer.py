@@ -5,7 +5,8 @@ expensive-to-compute results, hence the @cached_property decorators.
 """
 
 from typing import Dict, List, Tuple
-from collections import namedtuple
+from dataclasses import dataclass
+from itertools import zip_longest
 from functools import cached_property
 from math import isclose
 from fractions import Fraction
@@ -15,6 +16,12 @@ from simfile.notes.group import group_notes, SameBeatNotes, OrphanedNotes, NoteW
 from simfile.notes.count import *
 from simfile.timing import TimingData, BeatValues, BeatValue, Beat
 from simfile.timing.engine import TimingEngine
+
+
+@dataclass
+class StreamRun:
+    start: int
+    len: int
 
 
 class SongAnalyzer:
@@ -296,7 +303,6 @@ class ChartAnalyzer:
         }
     
     def get_density_graph(self) -> list:
-
         nps_data = [] # list of (measure time, nps) points in graph
 
         def append_point(time, nps):
@@ -353,6 +359,99 @@ class ChartAnalyzer:
         
         return nps_data
     
-    def get_stream_breakdown(self) -> str:
+    def get_stream_info(self) -> dict:
+        # calculate the bpm of each measure based on the measure's duration
+        measure_bpms = []
+        num_measures = self.last_note_beat // 4 + 1
+        start_t = self.engine.time_at(Beat(0))
+        for i in range(num_measures):
+            end_beat = Beat((i + 1) * 4)
+            end_t = self.engine.time_at(end_beat)
+            measure_len = end_t - start_t
+            measure_bpms.append(240 / measure_len) # convert length to bpm
+            start_t = end_t
+        
+        # try to build up stream runs for all the following quants
+        quants = (32, 24, 20, 16)
+        stream_runs = {q: [] for q in quants}
+        # keep track of measure bpms ourselves (i'd like to not rely on 
+        # displaybpm, see e.g. "Stamina RPG 7 - FE/Burning Throb")
+        min_bpm = {q: None for q in quants}
+        max_bpm = {q: None for q in quants}
+        for i, (count, bpm) in enumerate(zip_longest(
+            self.notes_per_measure, measure_bpms, fillvalue=0
+        )):
+            for q in quants:
+                if count >= q:
+                    # this is a stream measure
+                    runs = stream_runs[q]
+                    # can we extend the last stream run to include
+                    # this measure?
+                    if runs and runs[-1].start + runs[-1].len == i:
+                        runs[-1].len += 1
+                    # if not, create a new stream run
+                    else:
+                        runs.append(StreamRun(i, 1))
+                    
+                    if min_bpm[q] is None:
+                        # neither min_bpm nor max_bpm has been populated
+                        # yet; populate them now
+                        min_bpm[q] = bpm
+                        max_bpm[q] = bpm
+                    else:
+                        min_bpm[q] = min(min_bpm[q], bpm)
+                        max_bpm[q] = max(max_bpm[q], bpm)
+        
+        # figure out what quant to use for the breakdown.
+        # similar to zmod, this will be the first of (32nds, 24ths, 20ths) 
+        # whose total density (including breaks before/after all stream runs)
+        # is at least 20%, or 16ths if none of the previous quants' breakdowns
+        # were dense enough.
+        for q in quants:
+            total_stream = sum(run.len for run in stream_runs[q])
+            entire_chart_density = total_stream / num_measures
+            if entire_chart_density >= 0.2:
+                break
+        # since variables in python for loops persist after the loop ends,
+        # q and total_stream should now contain the correct values for the
+        # desired quant.
 
-        pass
+        # segments shall be a list of numeric values representing stream
+        # and break segments (positive for stream, negative for break).
+        # segment lengths are measured in original chart measures (quant
+        # adjustment will happen on the frontend).
+        # consecutive positive values imply a 1 measure break in between
+        segments = []
+        runs = stream_runs[q]
+        for i in range(len(runs)):
+            if i > 0:
+                # add break segment
+                break_start = runs[i - 1].start + runs[i - 1].len
+                break_end = runs[i].start
+                break_len = break_end - break_start
+                if break_len > 1:
+                    segments.append(-break_len)
+            # add stream segment
+            segments.append(runs[i].len)
+        
+        # number of measures in the chart, disregarding breaks before
+        # first run and after last run
+        if runs:
+            adj_measure_count = (runs[-1].start + runs[-1].len) - runs[0].start
+        else:
+            adj_measure_count = 0
+        total_break = adj_measure_count - total_stream
+
+        return {
+            'segments': segments,
+            'quant': q,
+            'bpms': [min_bpm[q], max_bpm[q]],
+            'total_stream': total_stream,
+            'total_break': total_break
+        }
+
+
+
+
+        
+        

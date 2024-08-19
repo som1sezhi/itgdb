@@ -213,6 +213,7 @@ class SongDetailView(generic.DetailView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         ctx = super().get_context_data(**kwargs)
         charts = self.object.chart_set.order_by('steps_type', 'difficulty')
+        
         ctx['density_data'] = [
             {
                 'id': chart.id,
@@ -222,7 +223,20 @@ class SongDetailView(generic.DetailView):
             }
             for chart in charts
         ]
+
+        ctx['stream_info'] = [
+            {
+                'id': chart.id,
+                **(
+                    chart.analysis['stream_info']
+                    if 'stream_info' in chart.analysis else {}
+                )
+            }
+            for chart in charts
+        ]
+
         ctx['links'] = _create_links_iterable(self.object.links)
+
         ctx['charts'] = [
             (chart, {
                 'density_data': ctx['density_data'][i],

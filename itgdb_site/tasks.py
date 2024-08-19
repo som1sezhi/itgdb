@@ -16,7 +16,7 @@ import patoolib
 from .utils.uploads import upload_pack, ProgressTrackingInfo
 from .utils.url_fetch import fetch_from_url
 from .utils.analysis import SongAnalyzer
-from .models import Song
+from .models import Song, Chart
 
 logger = get_task_logger(__name__)
 channel_layer = get_channel_layer()
@@ -202,9 +202,14 @@ def update_analyses(self, form_data):
     prog_tracker = ProgressTracker(self)
     song_count = Song.objects.count()
 
+    update_chart_len = 'chart_length' in which
+    update_stream_info = 'stream_info' in which
+
     # if no fields are specified, update nothing
     if not which:
         return
+    # figure out whether we need to iterate through all charts as well as songs
+    iterate_thru_charts = update_stream_info
 
     for i, song in enumerate(Song.objects.all()):
         prog_tracker.update_progress(
@@ -217,9 +222,34 @@ def update_analyses(self, form_data):
                 sim = simfile.load(f)
                 song_analyzer = SongAnalyzer(sim)
 
-                if 'chart_length' in which:
+                if update_chart_len:
                     chart_len = song_analyzer.get_chart_len()
                     song.chart_length = chart_len
+                
+                if iterate_thru_charts:
+                    for chart in sim.charts:
+                        try:
+                            chart_obj = song.chart_set.get(
+                                steps_type=Chart.steps_type_to_int(
+                                    chart.stepstype
+                                ),
+                                difficulty=Chart.difficulty_str_to_int(
+                                    chart.difficulty
+                                ),
+                                description=chart.description or ''
+                            )
+                        except Chart.DoesNotExist:
+                            continue
+
+                        chart_analyzer = \
+                            song_analyzer.get_chart_analyzer(chart)
+
+                        if 'stream_info' in which:
+                            stream_info = chart_analyzer.get_stream_info()
+                            chart_obj.analysis['stream_info'] = stream_info
+                        
+                        chart_obj.save()
+                        
         except FileNotFoundError:
             continue
         
