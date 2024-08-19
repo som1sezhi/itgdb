@@ -177,12 +177,14 @@ CELERY_RESULT_EXTENDED = True
 # Storages
 AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'itgdbtest')
 AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', 'http://s3.localhost.localstack.cloud:4566')
+AWS_S3_CUSTOM_DOMAIN = os.environ.get('AWS_S3_CUSTOM_DOMAIN')
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', 'fake')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', 'fake')
 AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME')
 base_bucket_storage_options = {
     'bucket_name': AWS_STORAGE_BUCKET_NAME,
     'endpoint_url': AWS_S3_ENDPOINT_URL,
+    'custom_domain': AWS_S3_CUSTOM_DOMAIN,
     'access_key': AWS_ACCESS_KEY_ID,
     'secret_key': AWS_SECRET_ACCESS_KEY,
 }
