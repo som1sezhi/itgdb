@@ -9,6 +9,7 @@ from django.utils.timezone import make_aware
 
 from .models import Pack, Song, Chart
 from .forms import PackSearchForm, SongSearchForm, ChartSearchForm
+from .utils.analysis.breakdown import generate_breakdown
 
 
 def _create_links_iterable(links: str):
@@ -224,17 +225,6 @@ class SongDetailView(generic.DetailView):
             for chart in charts
         ]
 
-        ctx['stream_info'] = [
-            {
-                'id': chart.id,
-                **(
-                    chart.analysis['stream_info']
-                    if 'stream_info' in chart.analysis else {}
-                )
-            }
-            for chart in charts
-        ]
-
         ctx['links'] = _create_links_iterable(self.object.links)
 
         ctx['charts'] = [
@@ -244,7 +234,9 @@ class SongDetailView(generic.DetailView):
                     chart_hash=chart.chart_hash
                 ).exclude(pk=chart.pk).order_by(
                     F('release_date').asc(nulls_last=True)
-                )
+                ),
+                'breakdown': generate_breakdown(chart.analysis['stream_info']) \
+                    if 'stream_info' in chart.analysis else 'unknown'
             })
             for i, chart in enumerate(charts)
         ]

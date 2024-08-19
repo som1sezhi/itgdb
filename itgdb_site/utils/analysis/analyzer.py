@@ -419,7 +419,7 @@ class ChartAnalyzer:
         # segments shall be a list of numeric values representing stream
         # and break segments (positive for stream, negative for break).
         # segment lengths are measured in original chart measures (quant
-        # adjustment will happen on the frontend).
+        # adjustment will happen in the views).
         # consecutive positive values imply a 1 measure break in between
         segments = []
         runs = stream_runs[q]
