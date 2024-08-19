@@ -32,6 +32,7 @@ sentry-sdk = {extras = ["django"], version = "*"}
 [dev-packages]
 localstack = "*"
 awscli-local = {extras = ["ver1"], version = "*"}
+snakeviz = "*"
 
 [requires]
 python_version = "3.10"

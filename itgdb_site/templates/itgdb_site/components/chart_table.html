@@ -54,7 +54,7 @@ Requires tables.css to be loaded.
             <span class="fst-italic text-muted">Unknown</span>
           {% endif %}
           <br />
-          {{ chart.song.length|duration }}
+          {{ chart.song.chart_length|duration }}
           <span class="opacity-25">|</span>
           <span class="opacity-50">BPM</span>
           {{ chart.song|display_bpm }}

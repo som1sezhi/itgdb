@@ -79,7 +79,7 @@ class Migration(migrations.Migration):
                 ('description', models.CharField(blank=True, max_length=255, null=True)),
                 ('chart_name', models.CharField(blank=True, max_length=255, null=True)),
                 ('chart_hash', models.CharField(max_length=40)),
-                ('density_graph', models.JSONField()),
+                ('density_graph', models.JSONField(default=dict)),
                 ('objects_count', models.PositiveIntegerField()),
                 ('steps_count', models.PositiveIntegerField()),
                 ('combo_count', models.PositiveIntegerField()),

@@ -9,6 +9,7 @@ from django.utils.timezone import make_aware
 
 from .models import Pack, Song, Chart
 from .forms import PackSearchForm, SongSearchForm, ChartSearchForm
+from .utils.analysis.breakdown import generate_breakdown
 
 
 def _create_links_iterable(links: str):
@@ -213,6 +214,7 @@ class SongDetailView(generic.DetailView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         ctx = super().get_context_data(**kwargs)
         charts = self.object.chart_set.order_by('steps_type', 'difficulty')
+        
         ctx['density_data'] = [
             {
                 'id': chart.id,
@@ -222,18 +224,30 @@ class SongDetailView(generic.DetailView):
             }
             for chart in charts
         ]
+
         ctx['links'] = _create_links_iterable(self.object.links)
-        ctx['charts'] = [
-            (chart, {
+
+        ctx['charts'] = []
+        for i, chart in enumerate(charts):
+            data = {
                 'density_data': ctx['density_data'][i],
                 'other_releases': Chart.objects.filter(
                     chart_hash=chart.chart_hash
                 ).exclude(pk=chart.pk).order_by(
                     F('release_date').asc(nulls_last=True)
                 )
-            })
-            for i, chart in enumerate(charts)
-        ]
+            }
+            if 'stream_info' in chart.analysis:
+                stream_info = chart.analysis['stream_info']
+                data['breakdown'] = generate_breakdown(stream_info)
+                n_stream = stream_info['total_stream']
+                n_measures = n_stream + stream_info['total_break']
+                if n_measures > 0:
+                    data['percent_stream'] = '%.1f%% (%d/%d)' \
+                        % (n_stream / n_measures * 100, n_stream, n_measures)
+                else:
+                    data['percent_stream'] = '0% (No stream)'
+            ctx['charts'].append((chart, data))
 
         # for some reason, using firstof in the django template breaks things
         # with sorl-thumbnail, so instead we decide which background image to

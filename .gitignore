@@ -7,3 +7,8 @@ db.sqlite3
 uploads/
 staticfiles/
 log/
+
+# for ad-hoc profiling
+test_profile.py
+stats*
+itgdb_site/tests/simfile_dirs/profile/

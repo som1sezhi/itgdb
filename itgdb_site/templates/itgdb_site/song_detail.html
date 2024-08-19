@@ -65,7 +65,7 @@
       {% endif %}
       <tr>
         <th scope="row">Length</th>
-        <td>{{ song.length|duration }}</td>
+        <td>{{ song.chart_length|duration }}</td>
       </tr>
       <tr>
         <th scope="row">BPM</th>
@@ -152,6 +152,9 @@
             <canvas id="densityChart{{ chart.id }}"></canvas>
           </div>
         </div>
+        <div class="row ps-3 mb-1 figure-caption">
+          Streams: {{ data.breakdown }}
+        </div>
       </div>
       <div class="col-12 col-sm-6">
         <table class="table table-sm info-table">
@@ -222,6 +225,10 @@
           </tr>
         {% endif %}
           <tr>
+            <th scope="row">Percent stream</th>
+            <td>{{ data.percent_stream }}</td>
+          </tr>
+          <tr>
             <th scope="row">Hash</th>
             <td>{{ chart.chart_hash|slice:16 }}</td>
           </tr>
@@ -240,10 +247,13 @@
 
 {% block script_extra %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
-{{ density_data|json_script }}
+{{ density_data|json_script:"densityDataJson" }}
 <script type="text/javascript">
-  // https://github.com/twbs/bootstrap/issues/25220#issuecomment-535915733
   $(document).ready(() => {
+    'use strict';
+
+    // automatic tab switching based on url ===================================
+    // https://github.com/twbs/bootstrap/issues/25220#issuecomment-535915733
     const url = window.location.href;
 
     function switchTab() {
@@ -264,88 +274,87 @@
       const newUrl = url.split('#')[0] + hash;
       history.replaceState(null, null, newUrl);
     });
+
+    // density charts =========================================================
+    const densityData = JSON.parse($('#densityDataJson').text());
+
+    const diffColors = [];
+    const docStyle = getComputedStyle(document.documentElement);
+    for (let i = 0; i < 6; i++) {
+      const col = `rgba(${docStyle.getPropertyValue(`--itgdb-diff-${i}`)}, 0.8)`;
+      diffColors.push(col);
+    }
+
+    // const peaks = densityData.map((d) => d.peak_nps);
+    // const yMax = peaks.reduce((a, b) => Math.max(a, b), 0);
+    for (const chartData of densityData) {
+      const ctx = $(`#densityChart${chartData.id}`)[0];
+      const data = {
+        datasets: [{
+          fill: 'origin',
+          showLine: true,
+          data: chartData.points.map(([x, y]) => ({x, y})),
+          backgroundColor: diffColors[chartData.diff_num]
+        }]
+      };
+
+      const chart = new Chart(ctx, {
+        type: 'scatter',
+        data: data,
+        options: {
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              type: 'linear',
+              position: 'bottom',
+              min: chartData.points[0][0],
+              max: chartData.points[chartData.points.length - 1][0],
+              ticks: {
+                display: false,
+              }
+            },
+            y: {
+              max: chartData.peak_nps,
+              ticks: {
+                display: false,
+              }
+            }
+          },
+          elements: {
+            point: {
+              pointStyle: false,
+            },
+            line: {
+              borderWidth: 1,
+            }
+          },
+          animation: {
+            duration: 0,
+          },
+          plugins: {
+            legend: {
+              display: false,
+            },
+            tooltip: {
+              animation: {
+                duration: 150,
+              }
+            }
+          },
+        }
+      });
+
+      $(document).on('themeChanged', (e) => {
+        const c = e.detail === 'light' ? '#444' : '#bbb';
+        const b = e.detail === 'light' ? '#00000010' : '#ffffff10';
+        chart.options.plugins.legend.labels.color = c;
+        chart.options.scales.x.ticks.color = c;
+        chart.options.scales.y.ticks.color = c;
+        chart.options.scales.x.grid.color = b;
+        chart.options.scales.y.grid.color = b;
+        chart.update();
+      });
+    }
   });
-
-  // density charts
-  let ch;
-  const densityData = JSON.parse(
-    document.currentScript.previousElementSibling.textContent
-  );
-  const diffColors = [];
-  const docStyle = getComputedStyle(document.documentElement);
-  for (let i = 0; i < 6; i++) {
-    const col = `rgba(${docStyle.getPropertyValue(`--itgdb-diff-${i}`)}, 0.8)`;
-    diffColors.push(col);
-  }
-  // const peaks = densityData.map((d) => d.peak_nps);
-  // const yMax = peaks.reduce((a, b) => Math.max(a, b), 0);
-  for (const chartData of densityData) {
-    const ctx = document.getElementById(`densityChart${chartData.id}`);
-    const data = {
-      datasets: [{
-        fill: 'origin',
-        showLine: true,
-        data: chartData.points.map(([x, y]) => ({x, y})),
-        backgroundColor: diffColors[chartData.diff_num]
-      }]
-    };
-
-    const chart = new Chart(ctx, {
-      type: 'scatter',
-      data: data,
-      options: {
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            type: 'linear',
-            position: 'bottom',
-            min: chartData.points[0][0],
-            max: chartData.points[chartData.points.length - 1][0],
-            ticks: {
-              display: false,
-            }
-          },
-          y: {
-            max: chartData.peak_nps,
-            ticks: {
-              display: false,
-            }
-          }
-        },
-        elements: {
-          point: {
-            pointStyle: false,
-          },
-          line: {
-            borderWidth: 1,
-          }
-        },
-        animation: {
-          duration: 0,
-        },
-        plugins: {
-          legend: {
-            display: false,
-          },
-          tooltip: {
-            animation: {
-              duration: 150,
-            }
-          }
-        },
-      }
-    });
-    ch = chart;
-    document.documentElement.addEventListener('themeChanged', (e) => {
-      const c = e.detail === 'light' ? '#444' : '#bbb';
-      const b = e.detail === 'light' ? '#00000010' : '#ffffff10';
-      chart.options.plugins.legend.labels.color = c;
-      chart.options.scales.x.ticks.color = c;
-      chart.options.scales.y.ticks.color = c;
-      chart.options.scales.x.grid.color = b;
-      chart.options.scales.y.grid.color = b;
-      chart.update();
-    });
-  }
 </script>
 {% endblock %}

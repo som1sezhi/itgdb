@@ -16,8 +16,8 @@ from celery import group
 import celery.result
 
 from .models import Tag, Pack, Song, Chart, ImageFile, PackCategory
-from .forms import PackUploadForm, BatchUploadForm
-from .tasks import process_pack_upload, process_pack_from_web
+from .forms import PackUploadForm, BatchUploadForm, UpdateAnalysesForm
+from .tasks import process_pack_upload, process_pack_from_web, update_analyses
 
 logger = logging.getLogger(__name__)
 
@@ -168,6 +168,24 @@ class PackAdmin(ExtraButtonsMixin, admin.ModelAdmin):
         return tasks
 
 
+@admin.register(Song)
+class SongAdmin(ExtraButtonsMixin, admin.ModelAdmin):
+    @button()
+    def update_chart_analyses(self, req):
+        context = self.get_common_context(req)
+        if req.method == 'POST':
+            form = UpdateAnalysesForm(req.POST)
+            if form.is_valid():
+                result = update_analyses.delay(form.cleaned_data)
+                return HttpResponseRedirect(
+                    reverse('admin:task_progress_tracker', args=(result.id,))
+                )
+        else:
+            form = UpdateAnalysesForm()
+        context['form'] = form
+        return render(req, 'admin/itgdb_site/update_analyses.html', context)
+
+
 admin.site.unregister(TaskResult)
 
 @admin.register(TaskResult)
@@ -219,7 +237,6 @@ class CustomGroupResultAdmin(GroupResultAdmin):
         return render(req, 'admin/itgdb_site/progress_tracker.html', ctx)
 
 
-admin.site.register(Song)
 admin.site.register(Chart)
 admin.site.register(Tag)
 admin.site.register(ImageFile)

@@ -2,7 +2,7 @@
 using the `simfile` library.
 """
 
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Iterable
 import hashlib
 import re
 import os
@@ -11,12 +11,14 @@ import subprocess
 from fractions import Fraction
 from simfile.types import Chart, Simfile
 from simfile.dir import SimfileDirectory, SimfilePack
-from simfile.notes import NoteData, NoteType
+from simfile.notes import NoteData, NoteType, Note
 from simfile.notes.group import group_notes, SameBeatNotes, OrphanedNotes, NoteWithTail
 from simfile.notes.count import *
 from simfile.timing import TimingData, BeatValues, Beat
 from simfile.timing.engine import TimingEngine
 from PIL import Image
+
+from .analysis import SongAnalyzer
 
 
 IMAGE_EXTS = ('.png', '.jpg', '.jpeg', '.gif', '.bmp')
@@ -83,220 +85,6 @@ def get_hash(sim: Simfile, chart: Chart) -> str:
     return hashlib.sha1((notedata + bpms).encode()).hexdigest()
 
 
-def _get_fake_segments(sim, chart):
-    # use .get() to handle SMChart/SMSimfile gracefully
-    fakes_str = chart.get('FAKES') or sim.get('FAKES')
-    if fakes_str:
-        return BeatValues.from_str(fakes_str)
-    return []
-
-
-def _is_in_fake_segment(fake_segs, beat):
-    return any(
-        seg.beat <= beat < seg.beat + Fraction(seg.value)
-        for seg in fake_segs
-    )
-
-
-def _get_hittable_arrows(sim: Simfile, chart: Chart) -> NoteData:
-    notes = NoteData(chart)
-    fake_segs = _get_fake_segments(sim, chart)
-    engine = TimingEngine(TimingData(sim, chart))
-    # as of current, the simfile package counters count notes in fake
-    # segments, while stepmania doesn't, so we'll have to filter it
-    # ourselves first
-    return NoteData.from_notes(filter(
-        lambda note: \
-            # keep all tails to avoid orphaning hold heads whose tails are in
-            # a fake segment.
-            # any orphaned tails will be dropped later by the counting functions
-            note.note_type == NoteType.TAIL or \
-            (
-                engine.hittable(note.beat) and \
-                not _is_in_fake_segment(fake_segs, note.beat)
-            ),
-        notes
-    ), notes.columns)
-
-
-def _count_hands(sim: Simfile, chart: Chart) -> int:
-    """Count hands according to StepMania's counting behavior."""
-    # currently, the simfile library's count_hands function does not count all
-    # hands in cases where notes happen during holds/rolls, so we roll our
-    # own function instead
-    notes = NoteData(chart)
-    grouped_notes = group_notes(
-        notes,
-        include_note_types=frozenset((
-            NoteType.TAP,
-            NoteType.HOLD_HEAD,
-            NoteType.ROLL_HEAD,
-            NoteType.LIFT,
-            NoteType.TAIL
-        )),
-        join_heads_to_tails=True,
-        same_beat_notes=SameBeatNotes.JOIN_ALL
-    )
-    fake_segs = _get_fake_segments(sim, chart)
-    engine = TimingEngine(TimingData(sim, chart))
-
-    tail_beats = [None] * notes.columns
-    hands_count = 0
-    for group in grouped_notes:
-        cur_beat = group[0].beat
-        # clear tails that have passed
-        for i, tail_beat in enumerate(tail_beats):
-            if tail_beat and tail_beat < cur_beat:
-                tail_beats[i] = None
-        # skip if notes are unhittable on this beat
-        if not engine.hittable(cur_beat) or \
-            _is_in_fake_segment(fake_segs, cur_beat):
-            continue
-        # detect and count hands
-        active_holds_count = sum(t is not None for t in tail_beats)
-        cur_row_note_count = len(group)
-        if active_holds_count + cur_row_note_count > 2:
-            hands_count += 1
-        # add new tails for holds/rolls that start on this beat
-        for note in group:
-            if isinstance(note, NoteWithTail):
-                tail_beats[note.column] = note.tail_beat
-    
-    return hands_count
-
-
-def get_counts(sim: Simfile, chart: Chart) -> dict:
-    """Get notecount statistics for a chart."""
-    notes = NoteData(chart)
-    hittables = _get_hittable_arrows(sim, chart)
-    return {
-        'objects': count_steps(
-            notes,
-            include_note_types=frozenset((
-                NoteType.TAP,
-                NoteType.HOLD_HEAD,
-                NoteType.ROLL_HEAD,
-                NoteType.LIFT,
-                NoteType.MINE,
-                NoteType.FAKE,
-            )),
-            same_beat_notes=SameBeatNotes.KEEP_SEPARATE
-        ),
-        'steps': count_steps(hittables),
-        'combo': count_steps(
-            hittables, same_beat_notes=SameBeatNotes.KEEP_SEPARATE
-        ),
-        'jumps': count_jumps(hittables),
-        'mines': count_mines(hittables),
-        'hands': _count_hands(sim, chart),
-        'holds': count_holds(
-            hittables, orphaned_tail=OrphanedNotes.DROP_ORPHAN
-        ),
-        'rolls': count_rolls(
-            hittables, orphaned_tail=OrphanedNotes.DROP_ORPHAN
-        ),
-        'lifts': count_steps(
-            hittables,
-            include_note_types=frozenset((NoteType.LIFT,)),
-            same_beat_notes=SameBeatNotes.KEEP_SEPARATE
-        ),
-        'fakes': count_steps(
-            notes,
-            include_note_types=frozenset((NoteType.FAKE,)),
-            same_beat_notes=SameBeatNotes.KEEP_SEPARATE
-        ),
-    }
-
-
-def get_density_graph(sim: Simfile, chart: Chart, chart_len: float) -> list:
-    hittables = _get_hittable_arrows(sim, chart)
-    grouped_notes = group_notes(
-        hittables,
-        include_note_types=frozenset(
-            (
-                NoteType.TAP,
-                NoteType.HOLD_HEAD,
-                NoteType.ROLL_HEAD,
-            )
-        ),
-        same_beat_notes=SameBeatNotes.JOIN_ALL
-    )
-
-    # get number of notes per measure
-    count_per_measure = []
-    cur_measure_start = 0
-    cur_measure_count = 0
-    for note_row in grouped_notes:
-        beat = note_row[0].beat
-        # if we've exited the current measure,
-        # finish the count for that measure and advance
-        if beat >= cur_measure_start + 4:
-            count_per_measure.append(cur_measure_count)
-            cur_measure_count = 0
-            cur_measure_start += 4
-            while beat - cur_measure_start >= 4:
-                count_per_measure.append(0)
-                cur_measure_start += 4
-        cur_measure_count += 1
-    # append final measure
-    count_per_measure.append(cur_measure_count)
-
-    nps_data = [] # list of (measure time, nps) points in graph
-    def append_point(time, nps):
-        # if last 2 points in graph have same nps,
-        # just move the 2nd one to current measure time
-        # (idea stolen from simply love's code)
-        if len(nps_data) >= 2 and \
-            isclose(nps, nps_data[-1][1]) and \
-            isclose(nps, nps_data[-2][1]):
-            nps_data[-1][0] = time
-        else:
-            nps_data.append([time, nps])
-    
-    # get nps for each measure, assemble final graph data
-    engine = TimingEngine(TimingData(sim, chart))
-    start_t = engine.time_at(Beat(0))
-    deferred_count = 0 # count of notes not put in the graph yet
-    for i, count in enumerate(count_per_measure):
-        end_beat = Beat((i + 1) * 4)
-        end_t = engine.time_at(end_beat)
-        measure_len = end_t - start_t
-        # as it turns out, time_at() is not necessary monotonic w.r.t. beat #,
-        # so we should check if measure is of positive length and only
-        # advance the time if so.
-        # also, the simply love code warns of certain scenarios, e.g.
-        # measures 48 and 49 of "Mudkyp Korea/Can't Nobody" contain a negative
-        # stop that creates a very small but positive-length measure
-        # that can inflate the NPS. so here, if the measure does not meet a
-        # certain length, we defer calculating the NPS until we
-        # accumulate more time from future measures
-        if measure_len > 0.12:
-            # calculate the NPS, including notes deferred from previous
-            # skipped measures
-            nps = (count + deferred_count) / measure_len
-            # reset the deferred count now that we've actually counted them
-            deferred_count = 0
-            append_point(start_t, nps)
-            start_t = end_t # end of measure is start of next measure
-        # as per above, if measure is too short/nonpositive length,
-        # defer its count until later
-        else:
-            deferred_count += count
-    # in the rare case where there are still deferred counts at the end,
-    # let's just ditch them
-
-    # add 0 nps point right after last measure
-    beat = Beat(len(count_per_measure) * 4)
-    time = engine.time_at(beat)
-    append_point(time, 0)
-
-    # add 0 nps point at *very* end of song:
-    if chart_len > nps_data[-1][0] + 0.1:
-        append_point(chart_len, 0)
-    
-    return nps_data
-
-
 # https://stackoverflow.com/a/37708342
 def _find_case_sensitive_path(dir: str, insensitive_path: str):
     insensitive_path = os.path.normpath(insensitive_path)
@@ -329,7 +117,6 @@ def _get_full_validated_asset_path(sim_dir_path: str, path: str):
     )
     
     # ensure path exists and does not point outside the pack
-    #print(full_path, pack_path)
     if full_path and full_path.startswith(pack_path):
         # ensure path is a file
         if os.path.isfile(full_path):
@@ -361,9 +148,6 @@ def get_assets(simfile_dir: SimfileDirectory) -> Dict[str, str | None]:
 
     sim = simfile_dir.open()
     sim_dir_path = os.path.normpath(simfile_dir.simfile_dir)
-
-    #print('====================', _get_full_validated_asset_path(sim_dir_path, sim.get('BANNER')))
-    #print(sim_dir_path, sim.get('BANNER'))
 
     # first, try to populate fields using the simfile's fields
     assets = {
@@ -473,14 +257,10 @@ def get_pack_banner_path(pack_path: str, simfile_pack: SimfilePack) -> str | Non
     return simfile_pack.banner()
 
 
-def get_song_lengths(music_path: str, sim: Simfile) -> Tuple[float, float] | None:
-    """Return two floats:
-    - the music length (as displayed on the songwheel in StepMania)
-    - the time when the song's charts ends (the rightmost bound of density 
-      graphs). This is the maximum of:
-        - the LASTSECONDHINT value
-        - the time of the last note in any chart in the simfile (edit charts
-          are ignored unless the only chart is a single edit chart)
+def get_song_lengths(
+    music_path: str, song_analyzer: SongAnalyzer
+) -> Tuple[float, float] | None:
+    """Return the song length (as displayed on the songwheel in StepMania).
     If the music file could not be opened, None is returned.
     """
     # fetch music file duration using ffprobe
@@ -494,34 +274,5 @@ def get_song_lengths(music_path: str, sim: Simfile) -> Tuple[float, float] | Non
 
     music_len = float(completed_process.stdout)
 
-    # init charts' end as the LASTSECONDHINT value
-    chart_end = float(sim.get('LASTSECONDHINT', '0'))
-    
-    for chart in sim.charts:
-        # NOTE: it is intended behavior for the chart length to be affected
-        # by charts with stepstype that are not 4/8-panel-based (e.g. pump)
-        # -- see the test_longer_chart test case.
-        # TODO: ignore lights chart?
-        # see Song::ReCalculateRadarValuesAndLastSecond() in SM source code
-
-        # ignore edit charts (unless it is the only chart)
-        # NOTE: SM doesn't like it if the simfile consists entirely of 2+ edit
-        # charts (the chart ends basically immediately). I think leaving
-        # chart_end at 0 is acceptable behavior in this case.
-        if chart.difficulty.lower() == 'edit' and len(sim.charts) > 1:
-            continue
-
-        notes = NoteData(chart)
-        # get the last note by exhausting the iterator
-        last_note = None
-        for last_note in notes:
-            pass
-
-        if last_note:
-            engine = TimingEngine(TimingData(sim, chart))
-            last_note_time = engine.time_at(last_note.beat)
-            chart_end = max(chart_end, last_note_time)
-    
+    chart_end = song_analyzer.get_chart_len()
     return max(music_len, chart_end), chart_end
-
-
