@@ -227,19 +227,27 @@ class SongDetailView(generic.DetailView):
 
         ctx['links'] = _create_links_iterable(self.object.links)
 
-        ctx['charts'] = [
-            (chart, {
+        ctx['charts'] = []
+        for i, chart in enumerate(charts):
+            data = {
                 'density_data': ctx['density_data'][i],
                 'other_releases': Chart.objects.filter(
                     chart_hash=chart.chart_hash
                 ).exclude(pk=chart.pk).order_by(
                     F('release_date').asc(nulls_last=True)
-                ),
-                'breakdown': generate_breakdown(chart.analysis['stream_info']) \
-                    if 'stream_info' in chart.analysis else 'unknown'
-            })
-            for i, chart in enumerate(charts)
-        ]
+                )
+            }
+            if 'stream_info' in chart.analysis:
+                stream_info = chart.analysis['stream_info']
+                data['breakdown'] = generate_breakdown(stream_info)
+                n_stream = stream_info['total_stream']
+                n_measures = n_stream + stream_info['total_break']
+                if n_measures > 0:
+                    data['percent_stream'] = '%.1f%% (%d/%d)' \
+                        % (n_stream / n_measures * 100, n_stream, n_measures)
+                else:
+                    data['percent_stream'] = '0% (No stream)'
+            ctx['charts'].append((chart, data))
 
         # for some reason, using firstof in the django template breaks things
         # with sorl-thumbnail, so instead we decide which background image to
