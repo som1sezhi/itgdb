@@ -1,6 +1,8 @@
 from datetime import datetime, timezone, time
 import csv
 import logging
+import json
+import re
 from django.contrib import admin
 from django.core.files.storage import default_storage
 from django.http import HttpResponseRedirect, HttpResponse
@@ -229,11 +231,29 @@ class CustomGroupResultAdmin(GroupResultAdmin):
         ctx = self.admin_site.each_context(req)
         group_result = celery.result.GroupResult.restore(group_id)
         # https://github.com/czue/celery-progress/issues/58#issuecomment-708132745
-        ctx['task_ids'] = [
+        task_ids = [
             task
             for parents in group_result.children
             for task in parents.as_list()[::-1]
         ]
+
+        def get_args_display(task_id):
+            try:
+                res = TaskResult.objects.get(task_id=task_id)
+            except TaskResult.DoesNotExist:
+                return None
+            # other task are unsupported right now
+            if res.task_name != 'itgdb_site.tasks.process_pack_from_web':
+                return None
+            m = re.match(r"\((\[.*\]), '(.*)'\)", json.loads(res.task_args))
+            if not m:
+                return res.task_args
+            names = re.findall(r"'name': '([^']*)'", m.group(1))
+            link = m.group(2)
+            return names, link
+
+        args = map(get_args_display, task_ids)
+        ctx['tasks'] = list(zip(task_ids, args))
         return render(req, 'admin/itgdb_site/progress_tracker.html', ctx)
 
 

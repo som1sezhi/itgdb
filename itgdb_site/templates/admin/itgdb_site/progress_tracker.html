@@ -3,9 +3,10 @@
 {% block content %}
 <h1>Progress Tracker</h1>
 
-{% for task_id in task_ids %}
+{% for task_id, args in tasks %}
 <div class='progress-wrapper-{{ forloop.counter0 }}'>
   <div>Task {{ task_id }}</div>
+  <div>Args: {{ args }}</div>
   <div id='progress-bar-{{ forloop.counter0 }}'>&nbsp;</div>
   <div id="progress-bar-message-{{ forloop.counter0 }}"></div>
 </div>
@@ -17,7 +18,7 @@
     const progressController = new ProgressBarController("/ws/progress");
 
     const taskIds = [
-      {% for task_id in task_ids %}
+      {% for task_id, _ in tasks %}
       "{{ task_id }}",
       {% endfor %}
     ];
