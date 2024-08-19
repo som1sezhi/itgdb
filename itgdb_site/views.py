@@ -247,6 +247,9 @@ class SongDetailView(generic.DetailView):
                         % (n_stream / n_measures * 100, n_stream, n_measures)
                 else:
                     data['percent_stream'] = '0% (No stream)'
+            else:
+                data['breakdown'] = 'unknown'
+                data['percent_stream'] = 'Unknown'
             ctx['charts'].append((chart, data))
 
         # for some reason, using firstof in the django template breaks things
