@@ -368,7 +368,11 @@ class ChartAnalyzer:
             end_beat = Beat((i + 1) * 4)
             end_t = self.engine.time_at(end_beat)
             measure_len = end_t - start_t
-            measure_bpms.append(240 / measure_len) # convert length to bpm
+            if measure_len != 0:
+                measure_bpms.append(240 / measure_len) # convert length to bpm
+            else:
+                # fallback to avoid division by 0
+                measure_bpms.append(0)
             start_t = end_t
         
         # try to build up stream runs for all the following quants
