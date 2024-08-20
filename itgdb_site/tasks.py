@@ -226,7 +226,7 @@ def update_analyses(self, form_data):
         file = song.simfile
         try:
             with file.open(mode='r') as f:
-                sim = simfile.load(f)
+                sim = simfile.load(f, strict=False)
                 song_analyzer = SongAnalyzer(sim)
 
                 if update_chart_len:
