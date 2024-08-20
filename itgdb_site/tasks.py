@@ -1,6 +1,7 @@
 import os
 import shutil
 import zipfile
+import mimetypes
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.db import transaction
@@ -166,6 +167,12 @@ def process_pack_from_web(self, pack_data_list, source_link):
         patoolib.extract_archive(
             file_path, verbosity=-1, outdir=extract_path, interactive=False
         )
+    except Exception as e:
+        # cleanup in case the extraction was partially complete before
+        # being interrupted
+        if os.path.exists(extract_path) and os.path.isdir(extract_path):
+            shutil.rmtree(extract_path)
+        raise e
     finally:
         os.remove(file_path)
 
