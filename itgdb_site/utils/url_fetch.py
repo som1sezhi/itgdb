@@ -21,7 +21,7 @@ def fetch_from_url(url: str) -> str:
         return gdown.download(url=url, output=path, fuzzy=True, quiet=True)
 
     # fetch from mega
-    elif re.match('https?://mega.nz/file/', url):
+    elif re.match('https?://mega.nz/', url):
         mega = Mega()
         m = mega.login()
         return str(m.download_url(url, dir_path, filename))
