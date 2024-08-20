@@ -256,9 +256,9 @@ class SongDetailView(generic.DetailView):
         # with sorl-thumbnail, so instead we decide which background image to
         # use in here.
         if self.object.bg:
-            ctx['bg_img'] = self.object.bg.image
+            ctx['bg_img'] = self.object.bg
         elif self.object.banner:
-            ctx['bg_img'] = self.object.banner.image
+            ctx['bg_img'] = self.object.banner
 
         graphics_links = []
         if self.object.banner:

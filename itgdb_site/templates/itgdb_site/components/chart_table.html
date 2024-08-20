@@ -26,9 +26,11 @@ Requires tables.css to be loaded.
       <tr>
 
         <td class="bn-cell">
-        {% thumbnail chart.song.banner.image "x50" as im %}
-          <img src="{{ im.url }}" />
-        {% endthumbnail %}
+        {% if chart.song.banner %}
+          {% with im=chart.song.banner.get_thumbnail %}
+            <img src="{{ im.url }}" />
+          {% endwith %}
+        {% endif %}
         </td>
 
         <td class="lh-sm text-start">

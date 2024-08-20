@@ -188,6 +188,21 @@ class SongAdmin(ExtraButtonsMixin, admin.ModelAdmin):
         return render(req, 'admin/itgdb_site/update_analyses.html', context)
 
 
+def _get_task_args_display(res):
+    if not res:
+        return None
+    # other task are unsupported right now
+    if res.task_name != 'itgdb_site.tasks.process_pack_from_web':
+        return None
+    args = json.loads(res.task_args)
+    m = re.search(r", '([^']*)'\)$", args)
+    if not m:
+        return json.loads(res.task_args)
+    link = m.group(1)
+    names = re.findall(r"'name': '((?:[^']|\\')*)'", args)
+    return names, link
+
+
 admin.site.unregister(TaskResult)
 
 @admin.register(TaskResult)
@@ -208,7 +223,7 @@ class CustomTaskResultAdmin(TaskResultAdmin):
     
     def progress_tracker(self, req, task_id):
         ctx = self.admin_site.each_context(req)
-        ctx['task_ids'] = [task_id]
+        ctx['tasks'] = [(task_id, None)]
         return render(req, 'admin/itgdb_site/progress_tracker.html', ctx)
 
 
@@ -242,22 +257,10 @@ class CustomGroupResultAdmin(GroupResultAdmin):
             res.task_id: res for res in results
         }
 
-        def get_args_display(task_id):
-            res = results.get(task_id)
-            if not res:
-                return None
-            # other task are unsupported right now
-            if res.task_name != 'itgdb_site.tasks.process_pack_from_web':
-                return None
-            args = json.loads(res.task_args)
-            m = re.search(r", '([^']*)'\)$", args)
-            if not m:
-                return json.loads(res.task_args)
-            link = m.group(1)
-            names = re.findall(r"'name': '((?:[^']|\\')*)'", args)
-            return names, link
-
-        args = map(get_args_display, task_ids)
+        args = map(
+            lambda task_id: _get_task_args_display(results.get(task_id)),
+            task_ids
+        )
         ctx['tasks'] = list(zip(task_ids, args))
         return render(req, 'admin/itgdb_site/progress_tracker.html', ctx)
 

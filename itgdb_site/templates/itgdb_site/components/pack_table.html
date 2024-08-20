@@ -41,9 +41,11 @@ Requires tables.css to be loaded.
     {% for pack in packs %}
       <tr>
         <td class="bn-cell">
-        {% thumbnail pack.banner.image "x50" as im %}
-          <img src="{{ im.url }}" />
-        {% endthumbnail %}
+        {% if pack.banner %}
+          {% with im=pack.banner.get_thumbnail %}
+            <img src="{{ im.url }}" />
+          {% endwith %}
+        {% endif %}
         </td>
         <td class="lh-sm text-start">
           {% include 'itgdb_site/components/pack_ref.html' %} 

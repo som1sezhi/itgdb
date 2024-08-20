@@ -13,6 +13,7 @@ from simfile.types import Simfile, Chart as SimfileChart
 from celery.utils.log import get_task_logger
 import cv2
 from sorl.thumbnail import get_thumbnail
+from PIL import Image
 
 from ..models import Pack, Song, Chart, ImageFile
 from .charts import (
@@ -27,6 +28,12 @@ ProgressTrackingInfo = namedtuple(
     'ProgressTrackingTask',
     ['progress_tracker', 'finished_subparts', 'num_subparts']
 )
+
+
+def _determine_has_alpha(file):
+    with Image.open(file) as img:
+        mode = img.mode
+    return mode in {'RGBA', 'LA', 'PA', 'RGBa', 'La'}
 
 
 def _get_image(path, parent_obj, cache, generate_thumbnail=False):
@@ -50,22 +57,24 @@ def _get_image(path, parent_obj, cache, generate_thumbnail=False):
 
     if img_path:
         with open(img_path, 'rb') as f:
+            has_alpha = _determine_has_alpha(f)
             base_filename = os.path.basename(img_path)
             if isinstance(parent_obj, Pack):
                 img_file = ImageFile(
                     pack = parent_obj,
-                    image = File(f, name=f'{uuid.uuid4()}_{base_filename}')
+                    image = File(f, name=f'{uuid.uuid4()}_{base_filename}'),
+                    has_alpha = has_alpha
                 )
             else: # parent_obj is a Song
                 img_file = ImageFile(
                     song = parent_obj,
-                    image = File(f, name=f'{uuid.uuid4()}_{base_filename}')
+                    image = File(f, name=f'{uuid.uuid4()}_{base_filename}'),
+                    has_alpha = has_alpha
                 )
             img_file.save()
             if generate_thumbnail:
                 # pregenerate thumbnail
-                # NOTE: geometry string here is for banner thumbnails
-                get_thumbnail(img_file.image, 'x50')
+                img_file.get_thumbnail()
             cache[path] = img_file
             return img_file
     

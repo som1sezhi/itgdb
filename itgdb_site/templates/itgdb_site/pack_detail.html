@@ -11,9 +11,9 @@
 
 {% block body_extra %}
 {% if pack.banner %}
-  {% thumbnail pack.banner.image "x50" as im %}
+  {% with im=pack.banner.get_thumbnail %}
     {% include 'itgdb_site/components/blurred_bg.html' with bg_url=im.url %}
-  {% endthumbnail %}
+  {% endwith %}
 {% endif %}
 {% endblock %}
 

@@ -2,6 +2,7 @@ from django.core.files.storage import storages
 from django.db import models
 from django.contrib.postgres.search import SearchVector
 from django.contrib.postgres.indexes import GinIndex
+from sorl.thumbnail import get_thumbnail
 
 # Callables to pass into the storage argument of a FileField/ImageField.
 # Using a callable prevents the storage from being hardcoded into
@@ -17,6 +18,7 @@ class ImageFile(models.Model):
     pack = models.ForeignKey('Pack', on_delete=models.CASCADE, blank=True, null=True)
     song = models.ForeignKey('Song', on_delete=models.CASCADE, blank=True, null=True)
     image = models.ImageField(storage=get_simfilemedia_storage)
+    has_alpha = models.BooleanField()
 
     class Meta:
         constraints = [
@@ -32,6 +34,19 @@ class ImageFile(models.Model):
         splits = self.image.name.split("_", 1)
         name = splits[1 if len(splits) > 1 else 0]
         return f'{self.id}: {name}'
+    
+    def get_thumbnail(self):
+        # PIL will error out if it tries to save an image with alpha as JPEG,
+        # so we use PNG format for those instead
+        format = 'PNG' if self.has_alpha else 'JPEG'
+        try:
+            return get_thumbnail(self.image, 'x50', format=format)
+        except OSError:
+            # in case there are some images with incorrectly-labelled has_alpha
+            # values, just have it generate PNG as fallback
+            self.has_alpha = True
+            self.save()
+            return get_thumbnail(self.image, 'x50', format='PNG')
 
 
 class Tag(models.Model):

@@ -53,9 +53,11 @@ Requires tables.css to be loaded.
       <tr>
 
         <td class="bn-cell">
-        {% thumbnail song.banner.image "x50" as im %}
-          <img src="{{ im.url }}" />
-        {% endthumbnail %}
+        {% if song.banner %}
+          {% with im=song.banner.get_thumbnail %}
+            <img src="{{ im.url }}" />
+          {% endwith %}
+        {% endif %}
         </td>
 
         <td class="lh-sm text-start">
