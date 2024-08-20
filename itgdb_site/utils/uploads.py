@@ -124,7 +124,7 @@ def upload_song(
     if image_cache is None:
         image_cache = {}
 
-    sim = simfile_dir.open()
+    sim = simfile_dir.open(strict=False)
     assets = get_assets(simfile_dir)
     sim_path = simfile_dir.simfile_path
     sim_filename = os.path.basename(sim_path)
