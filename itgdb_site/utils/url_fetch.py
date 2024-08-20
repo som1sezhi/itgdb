@@ -31,7 +31,15 @@ def fetch_from_url(url: str) -> str:
         # modify URL to so it can be fetched from directly
         url = url.replace('dl=0', 'dl=1')
     
-    with urllib.request.urlopen(url) as response, open(path, 'wb') as out_file:
+    if url.startswith('http'):
+        req = urllib.request.Request(url)
+        req.add_header(
+            'User-Agent',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
+        )
+    else: # e.g. file://
+        req = url
+    with urllib.request.urlopen(req) as response, open(path, 'wb') as out_file:
         shutil.copyfileobj(response, out_file)
 
     return path
