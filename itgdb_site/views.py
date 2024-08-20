@@ -179,7 +179,7 @@ class PackDetailView(generic.DetailView):
                 for i in range(1, len(meters)):
                     m = meters[i]
                     prev_m = meters[i - 1]
-                    if m - prev_m <= 5:
+                    if m - prev_m <= 3:
                         labels.extend(range(prev_m + 1, m + 1))
                     else:
                         labels.append(m)
