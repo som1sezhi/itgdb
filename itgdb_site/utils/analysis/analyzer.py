@@ -230,7 +230,8 @@ class ChartAnalyzer:
                 NoteType.TAIL
             )),
             join_heads_to_tails=True,
-            same_beat_notes=SameBeatNotes.JOIN_ALL
+            same_beat_notes=SameBeatNotes.JOIN_ALL,
+            orphaned_tail=OrphanedNotes.DROP_ORPHAN
         )
 
         tail_beats = [None] * self.notes.columns
