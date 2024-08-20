@@ -91,7 +91,16 @@ class ChartAnalyzer:
     def __init__(self, chart: Chart, song_analyzer: SongAnalyzer):
         self.sim = song_analyzer.sim
         self.chart = chart
-        self.notes = NoteData(chart)
+        # currently, the simfile library raises IndexError when creating
+        # a NoteData instance from a chart with a completely empty NOTES
+        # property, so we check for this condition before creating one
+        if chart.notes and chart.notes.strip():
+            self.notes = NoteData(chart)
+        else:
+            # create an empty NoteData instance ourselves
+            columns = 8 if chart.stepstype == 'dance-double' else 4
+            notes_str = ('0' * columns + '\n') * 4
+            self.notes = NoteData(notes_str)
         self.engine = TimingEngine(TimingData(self.sim, chart))
         self.song_analyzer = song_analyzer
 
@@ -189,6 +198,8 @@ class ChartAnalyzer:
         last_note = None
         for last_note in self.notes:
             pass
+        if last_note is None:
+            return None
         return last_note.beat
 
     def _is_in_fake_segment(
@@ -361,6 +372,16 @@ class ChartAnalyzer:
         return nps_data
     
     def get_stream_info(self) -> dict:
+        # special case if chart is completely empty
+        if self.last_note_beat is None:
+            return {
+                'segments': [],
+                'quant': 16,
+                'bpms': [None, None],
+                'total_stream': 0,
+                'total_break': 0
+            }
+
         # calculate the bpm of each measure based on the measure's duration
         measure_bpms = []
         num_measures = self.last_note_beat // 4 + 1
@@ -454,9 +475,3 @@ class ChartAnalyzer:
             'total_stream': total_stream,
             'total_break': total_break
         }
-
-
-
-
-        
-        
