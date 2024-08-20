@@ -59,7 +59,7 @@ RUN chmod +x /start-celeryworker.sh
 COPY . /app/
 RUN mkdir /app/uploads
 
-RUN useradd djangouser
+RUN useradd -m djangouser
 
 RUN chown -R djangouser /app
 
