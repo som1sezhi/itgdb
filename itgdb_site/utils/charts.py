@@ -146,7 +146,7 @@ def get_assets(simfile_dir: SimfileDirectory) -> Dict[str, str | None]:
     # see TidyUpData() in Song.cpp in the stepmania source code for the
     # original algorithm
 
-    sim = simfile_dir.open()
+    sim = simfile_dir.open(strict=False)
     sim_dir_path = os.path.normpath(simfile_dir.simfile_dir)
 
     # first, try to populate fields using the simfile's fields
