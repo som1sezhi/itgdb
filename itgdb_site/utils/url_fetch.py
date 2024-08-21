@@ -27,7 +27,7 @@ def fetch_from_url(url: str) -> str:
         return str(m.download_url(url, dir_path, filename))
     
     # fetch from dropbox
-    elif re.match('https?://www.dropbox.com/s/', url):
+    elif re.match('https?://www.dropbox.com/', url):
         # modify URL to so it can be fetched from directly
         url = url.replace('dl=0', 'dl=1')
     

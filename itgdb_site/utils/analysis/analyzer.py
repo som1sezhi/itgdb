@@ -4,7 +4,7 @@ My main reason for using classes here is so that I can more easily cache certain
 expensive-to-compute results, hence the @cached_property decorators.
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Iterable, FrozenSet, Iterator
 from dataclasses import dataclass
 from itertools import zip_longest
 from functools import cached_property
@@ -12,10 +12,19 @@ from math import isclose
 from fractions import Fraction
 from simfile.types import Chart, Simfile
 from simfile.notes import NoteData, NoteType, Note
-from simfile.notes.group import group_notes, SameBeatNotes, OrphanedNotes, NoteWithTail
+from simfile.notes.group import group_notes, SameBeatNotes, OrphanedNotes, NoteWithTail, GroupedNotes
 from simfile.notes.count import *
 from simfile.timing import TimingData, BeatValues, BeatValue, Beat
 from simfile.timing.engine import TimingEngine
+
+
+DEFAULT_GROUP_NOTE_TYPES = frozenset((
+    NoteType.TAP,
+    NoteType.HOLD_HEAD,
+    NoteType.ROLL_HEAD,
+    NoteType.LIFT,
+    NoteType.TAIL
+))
 
 
 @dataclass
@@ -226,24 +235,28 @@ class ChartAnalyzer:
             result = beat < seg.beat + Fraction(seg.value)
         return result, start_idx
     
+    @staticmethod
+    def _group_notes_no_orphans(
+        notes: Iterable[Note],
+        *,
+        include_note_types: FrozenSet[NoteType] = DEFAULT_GROUP_NOTE_TYPES,
+        same_beat_notes: SameBeatNotes = SameBeatNotes.JOIN_ALL,
+    ) -> Iterator[GroupedNotes]:
+        return group_notes(
+            notes,
+            include_note_types=include_note_types,
+            join_heads_to_tails=True,
+            same_beat_notes=same_beat_notes,
+            orphaned_head=OrphanedNotes.DROP_ORPHAN,
+            orphaned_tail=OrphanedNotes.DROP_ORPHAN
+        )
+    
     def _count_hands(self) -> int:
         """Count hands according to StepMania's counting behavior."""
         # currently, the simfile library's count_hands function does not count all
         # hands in cases where notes happen during holds/rolls, so we roll our
         # own function instead
-        grouped_notes = group_notes(
-            self.notes,
-            include_note_types=frozenset((
-                NoteType.TAP,
-                NoteType.HOLD_HEAD,
-                NoteType.ROLL_HEAD,
-                NoteType.LIFT,
-                NoteType.TAIL
-            )),
-            join_heads_to_tails=True,
-            same_beat_notes=SameBeatNotes.JOIN_ALL,
-            orphaned_tail=OrphanedNotes.DROP_ORPHAN
-        )
+        grouped_notes = self._group_notes_no_orphans(self.notes)
 
         tail_beats = [None] * self.notes.columns
         hands_count = 0
@@ -276,31 +289,43 @@ class ChartAnalyzer:
 
     def get_counts(self) -> Dict[str, int]:
         """Get notecount statistics for a chart."""
+        # NOTE: stepmania discard orphaned hold heads, but there's currently 
+        # no way to exclude those through simfile's count_steps() function.
+        # thus we basically reproduce count_steps() here but with our own
+        # grouping function _group_notes_no_orphans() to exclude orphaned heads
         return {
-            'objects': count_steps(
+            'objects': count_grouped_notes(self._group_notes_no_orphans(
                 self.notes,
                 include_note_types=frozenset((
                     NoteType.TAP,
                     NoteType.HOLD_HEAD,
                     NoteType.ROLL_HEAD,
+                    NoteType.TAIL,
                     NoteType.LIFT,
                     NoteType.MINE,
                     NoteType.FAKE,
                 )),
                 same_beat_notes=SameBeatNotes.KEEP_SEPARATE
-            ),
-            'steps': count_steps(self.hittables),
-            'combo': count_steps(
-                self.hittables, same_beat_notes=SameBeatNotes.KEEP_SEPARATE
-            ),
+            )),
+            'steps': count_grouped_notes(self._group_notes_no_orphans(
+                self.hittables
+            )),
+            'combo': count_grouped_notes(self._group_notes_no_orphans(
+                self.hittables,
+                same_beat_notes=SameBeatNotes.KEEP_SEPARATE
+            )),
             'jumps': count_jumps(self.hittables),
             'mines': count_mines(self.hittables),
             'hands': self._count_hands(),
             'holds': count_holds(
-                self.hittables, orphaned_tail=OrphanedNotes.DROP_ORPHAN
+                self.hittables,
+                orphaned_head=OrphanedNotes.DROP_ORPHAN,
+                orphaned_tail=OrphanedNotes.DROP_ORPHAN
             ),
             'rolls': count_rolls(
-                self.hittables, orphaned_tail=OrphanedNotes.DROP_ORPHAN
+                self.hittables,
+                orphaned_head=OrphanedNotes.DROP_ORPHAN,
+                orphaned_tail=OrphanedNotes.DROP_ORPHAN
             ),
             'lifts': count_steps(
                 self.hittables,

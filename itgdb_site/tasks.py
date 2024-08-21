@@ -209,14 +209,15 @@ def update_analyses(self, form_data):
     prog_tracker = ProgressTracker(self)
     song_count = Song.objects.count()
 
-    update_chart_len = 'chart_length' in which
-    update_stream_info = 'stream_info' in which
-
     # if no fields are specified, update nothing
     if not which:
         return
+    
+    should_update = {
+        k: k in which for k in ('chart_length', 'stream_info', 'counts')
+    }
     # figure out whether we need to iterate through all charts as well as songs
-    iterate_thru_charts = update_stream_info
+    iterate_thru_charts = should_update['stream_info'] or should_update['counts']
 
     for i, song in enumerate(Song.objects.all()):
         prog_tracker.update_progress(
@@ -229,33 +230,46 @@ def update_analyses(self, form_data):
                 sim = simfile.load(f, strict=False)
                 song_analyzer = SongAnalyzer(sim)
 
-                if update_chart_len:
+                if should_update['chart_length']:
                     chart_len = song_analyzer.get_chart_len()
                     song.chart_length = chart_len
                 
-                if iterate_thru_charts:
-                    for chart in sim.charts:
-                        try:
-                            chart_obj = song.chart_set.get(
-                                steps_type=Chart.steps_type_to_int(
-                                    chart.stepstype
-                                ),
-                                difficulty=Chart.difficulty_str_to_int(
-                                    chart.difficulty
-                                ),
-                                description=chart.description or ''
-                            )
-                        except Chart.DoesNotExist:
-                            continue
+                if not iterate_thru_charts:
+                    song.save()
+                    continue
 
-                        chart_analyzer = \
-                            song_analyzer.get_chart_analyzer(chart)
+                for chart in sim.charts:
+                    try:
+                        print(song, chart.stepstype, chart.difficulty, chart.description)
+                        chart_obj = song.chart_set.get(
+                            steps_type=Chart.steps_type_to_int(
+                                chart.stepstype
+                            ),
+                            difficulty=Chart.difficulty_str_to_int(
+                                chart.difficulty
+                            ),
+                            description=chart.description or ''
+                        )
+                    except Chart.DoesNotExist:
+                        continue
 
-                        if 'stream_info' in which:
-                            stream_info = chart_analyzer.get_stream_info()
-                            chart_obj.analysis['stream_info'] = stream_info
-                        
-                        chart_obj.save()
+                    chart_analyzer = \
+                        song_analyzer.get_chart_analyzer(chart)
+
+                    if should_update['stream_info']:
+                        stream_info = chart_analyzer.get_stream_info()
+                        chart_obj.analysis['stream_info'] = stream_info
+                    
+                    if should_update['counts']:
+                        counts = chart_analyzer.get_counts()
+                        counts = {
+                            k + '_count': v for k, v in counts.items()
+                        }
+                        Chart.objects.filter(
+                            id=chart_obj.id
+                        ).update(**counts)
+                    
+                    chart_obj.save()
                         
         except FileNotFoundError:
             continue
