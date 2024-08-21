@@ -40,6 +40,8 @@ RUN apt-get update \
     iputils-ping \
     # for opening various file formats
     ffmpeg p7zip-full unar file \
+    # for mimetype guessing
+    mime-support \
     # cleaning up unused files
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*

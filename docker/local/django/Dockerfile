@@ -40,8 +40,8 @@ RUN apt-get update \
     iputils-ping procps strace \
     # for opening various file formats
     ffmpeg p7zip-full unar file \
-    # for downloading megacmd package
-    wget
+    # for mimetype guessing
+    mime-support
 
 # cleaning up unused files
 RUN apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
