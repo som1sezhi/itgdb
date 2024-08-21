@@ -261,12 +261,8 @@ def update_analyses(self, form_data):
                     
                     if should_update['counts']:
                         counts = chart_analyzer.get_counts()
-                        counts = {
-                            k + '_count': v for k, v in counts.items()
-                        }
-                        Chart.objects.filter(
-                            id=chart_obj.id
-                        ).update(**counts)
+                        for k, v in counts.items():
+                            setattr(chart_obj, k + '_count', v)
                     
                     chart_obj.save()
                         

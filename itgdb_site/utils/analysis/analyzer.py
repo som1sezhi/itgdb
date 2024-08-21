@@ -25,6 +25,21 @@ DEFAULT_GROUP_NOTE_TYPES = frozenset((
     NoteType.LIFT,
     NoteType.TAIL
 ))
+COMBO_INCREASING_NOTE_TYPES = frozenset((
+    NoteType.TAP,
+    NoteType.HOLD_HEAD,
+    NoteType.ROLL_HEAD,
+    NoteType.LIFT
+))
+ALL_NOTE_TYPES = frozenset(( # or at least all the ones we care about
+    NoteType.TAP,
+    NoteType.HOLD_HEAD,
+    NoteType.ROLL_HEAD,
+    NoteType.TAIL,
+    NoteType.LIFT,
+    NoteType.MINE,
+    NoteType.FAKE,
+))
 
 
 def get_chart_key(chart: Chart) -> Tuple[str]:
@@ -142,48 +157,50 @@ class ChartAnalyzer:
         return []
 
     @cached_property
-    def hittables(self) -> List[Note]:
+    def hittables(self) -> List[GroupedNotes]:
+        """A list of all objects in the chart that land on a hittable beat,
+        grouped by beat."""
         # as of current, the simfile package counters count notes in fake
         # segments, while stepmania doesn't, so we'll have to filter it
         # ourselves first.
 
         # turns out it's quite a bit faster to just store all the hittable notes
         # in a list and reuse that than to use an iterator and run through
-        # the notedata iteration process multiple times. i don't think the 
-        # memory cost will be super bad either (1M notes will take up around 
-        # 88 MB if my math is correct)
+        # the notedata iteration process multiple times. memory will
+        # take a hit but i think it'll be fine
         def generator():
             start_idx = -1
-            for note in self.notes:
-                if note.note_type == NoteType.TAIL:
-                    # keep all tails to avoid orphaning hold heads whose tails
-                    # are in a fake segment.
-                    # any orphaned tails will be dropped later by the
-                    # counting functions
-                    yield note
-                elif not self.engine.hittable(note.beat):
+            group_iterator = self._group_notes_no_orphans(
+                self.notes,
+                include_note_types=ALL_NOTE_TYPES
+            )
+            for grouped_notes in group_iterator:
+                beat = grouped_notes[0].beat
+                if not self.engine.hittable(beat):
                     continue
                 else:
                     in_fake_seg, start_idx = self._is_in_fake_segment(
-                        note.beat, start_idx
+                        beat, start_idx
                     )
                     if not in_fake_seg:
-                        yield note
+                        yield grouped_notes
 
         return list(generator())
+    
+    @cached_property
+    def hittable_combo_notes(self) -> List[GroupedNotes]:
+        return list(self._filter_notes_by_type(
+            self.hittables, COMBO_INCREASING_NOTE_TYPES
+        ))
 
     @cached_property
     def notes_per_measure(self) -> List[int]:
-        grouped_notes = group_notes(
-            self.hittables,
-            include_note_types=frozenset(
-                (
-                    NoteType.TAP,
-                    NoteType.HOLD_HEAD,
-                    NoteType.ROLL_HEAD,
-                )
-            ),
-            same_beat_notes=SameBeatNotes.JOIN_ALL
+        grouped_notes = self._filter_groups_by_type(
+            self.hittables, frozenset((
+                NoteType.TAP,
+                NoteType.HOLD_HEAD,
+                NoteType.ROLL_HEAD,
+            ))
         )
 
         # get number of notes per measure
@@ -249,6 +266,8 @@ class ChartAnalyzer:
         include_note_types: FrozenSet[NoteType] = DEFAULT_GROUP_NOTE_TYPES,
         same_beat_notes: SameBeatNotes = SameBeatNotes.JOIN_ALL,
     ) -> Iterator[GroupedNotes]:
+        """Return an iterator of grouped notes with all orphaned heads/tails
+        dropped."""
         return group_notes(
             notes,
             include_note_types=include_note_types,
@@ -257,31 +276,55 @@ class ChartAnalyzer:
             orphaned_head=OrphanedNotes.DROP_ORPHAN,
             orphaned_tail=OrphanedNotes.DROP_ORPHAN
         )
+
+    @staticmethod
+    def _filter_notes_by_type(
+        grouped_notes_iterator: Iterable[GroupedNotes],
+        note_types: FrozenSet[NoteType]
+    ) -> Iterable[GroupedNotes]:
+        """Filters out all notes not in note_types from the given
+        grouped_notes_iterator."""
+        return (
+            tuple(note for note in group if note.note_type in note_types)
+            for group in grouped_notes_iterator
+            if any(note.note_type in note_types for note in group)
+        )
+    
+    @staticmethod
+    def _filter_groups_by_type(
+        grouped_notes_iterator: Iterable[GroupedNotes],
+        note_types: FrozenSet[NoteType]
+    ) -> Iterable[GroupedNotes]:
+        """Filters out all groups that do not contain at least 1 note
+        in note_types."""
+        return (
+            group for group in grouped_notes_iterator
+            if any(note.note_type in note_types for note in group)
+        )
+    
+    @staticmethod
+    def _count_individual_notes(
+        grouped_notes_iterator: Iterable[GroupedNotes],
+        note_type: NoteType
+    ) -> int:
+        return sum(
+            sum(note.note_type == note_type for note in group)
+            for group in grouped_notes_iterator
+        )
     
     def _count_hands(self) -> int:
         """Count hands according to StepMania's counting behavior."""
         # currently, the simfile library's count_hands function does not count all
         # hands in cases where notes happen during holds/rolls, so we roll our
         # own function instead
-        grouped_notes = self._group_notes_no_orphans(self.notes)
-
         tail_beats = [None] * self.notes.columns
         hands_count = 0
-        fake_seg_start_idx = -1
-        for group in grouped_notes:
+        for group in self.hittable_combo_notes:
             cur_beat = group[0].beat
             # clear tails that have passed
             for i, tail_beat in enumerate(tail_beats):
                 if tail_beat and tail_beat < cur_beat:
                     tail_beats[i] = None
-            # skip if notes are unhittable on this beat
-            if not self.engine.hittable(cur_beat):
-                continue
-            in_fake_seg, fake_seg_start_idx = self._is_in_fake_segment(
-                cur_beat, fake_seg_start_idx
-            )
-            if in_fake_seg:
-                continue
             # detect and count hands
             active_holds_count = sum(t is not None for t in tail_beats)
             cur_row_note_count = len(group)
@@ -300,44 +343,36 @@ class ChartAnalyzer:
         # no way to exclude those through simfile's count_steps() function.
         # thus we basically reproduce count_steps() here but with our own
         # grouping function _group_notes_no_orphans() to exclude orphaned heads
+        # for n in self.hittables:
+        #     print(n.beat, n.column, n.note_type)
+        # print('===================================')
+        # for n in self._group_notes_no_orphans(
+        #     self.hittables,
+        #     same_beat_notes=SameBeatNotes.KEEP_SEPARATE
+        # ):
+        #     print(n)
+
         return {
-            'objects': count_grouped_notes(self._group_notes_no_orphans(
+            'objects': sum(1 for _ in self._group_notes_no_orphans(
                 self.notes,
-                include_note_types=frozenset((
-                    NoteType.TAP,
-                    NoteType.HOLD_HEAD,
-                    NoteType.ROLL_HEAD,
-                    NoteType.TAIL,
-                    NoteType.LIFT,
-                    NoteType.MINE,
-                    NoteType.FAKE,
-                )),
+                include_note_types=ALL_NOTE_TYPES,
                 same_beat_notes=SameBeatNotes.KEEP_SEPARATE
             )),
-            'steps': count_grouped_notes(self._group_notes_no_orphans(
-                self.hittables
-            )),
-            'combo': count_grouped_notes(self._group_notes_no_orphans(
-                self.hittables,
-                same_beat_notes=SameBeatNotes.KEEP_SEPARATE
-            )),
-            'jumps': count_jumps(self.hittables),
-            'mines': count_mines(self.hittables),
+            'steps': sum(1 for _ in self.hittable_combo_notes),
+            'combo': sum(len(grp) for grp in self.hittable_combo_notes),
+            'jumps': sum(len(grp) >= 2 for grp in self.hittable_combo_notes),
+            'mines': self._count_individual_notes(
+                self.hittables, NoteType.MINE
+            ),
             'hands': self._count_hands(),
-            'holds': count_holds(
-                self.hittables,
-                orphaned_head=OrphanedNotes.DROP_ORPHAN,
-                orphaned_tail=OrphanedNotes.DROP_ORPHAN
+            'holds': self._count_individual_notes(
+                self.hittable_combo_notes, NoteType.HOLD_HEAD
             ),
-            'rolls': count_rolls(
-                self.hittables,
-                orphaned_head=OrphanedNotes.DROP_ORPHAN,
-                orphaned_tail=OrphanedNotes.DROP_ORPHAN
+            'rolls': self._count_individual_notes(
+                self.hittable_combo_notes, NoteType.ROLL_HEAD
             ),
-            'lifts': count_steps(
-                self.hittables,
-                include_note_types=frozenset((NoteType.LIFT,)),
-                same_beat_notes=SameBeatNotes.KEEP_SEPARATE
+            'lifts': self._count_individual_notes(
+                self.hittable_combo_notes, NoteType.LIFT
             ),
             'fakes': count_steps(
                 self.notes,

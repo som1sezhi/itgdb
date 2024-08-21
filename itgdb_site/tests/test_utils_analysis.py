@@ -75,6 +75,24 @@ class GetCountsTestClass(SimpleTestCase):
                 'fakes': 0
             }
         )
+    
+    def test_orphans_are_discarded(self):
+        # test that orphaned hold/roll heads/tails are discarded during counts
+        self._do_test(
+            'test_orphans_are_discarded',
+            {
+                'objects': 12,
+                'steps': 5,
+                'combo': 6,
+                'jumps': 1,
+                'mines': 5,
+                'hands': 0,
+                'holds': 3,
+                'rolls': 1,
+                'lifts': 0,
+                'fakes': 0
+            }
+        )
 
 
 class GetStreamInfoTestClass(SimpleTestCase):
