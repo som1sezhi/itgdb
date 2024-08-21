@@ -240,7 +240,6 @@ def update_analyses(self, form_data):
 
                 for chart in sim.charts:
                     try:
-                        print(song, chart.stepstype, chart.difficulty, chart.description)
                         chart_obj = song.chart_set.get(
                             steps_type=Chart.steps_type_to_int(
                                 chart.stepstype

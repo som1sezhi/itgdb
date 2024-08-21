@@ -1,1 +1,1 @@
-from .analyzer import SongAnalyzer, ChartAnalyzer
+from .analyzer import SongAnalyzer, ChartAnalyzer, get_chart_key

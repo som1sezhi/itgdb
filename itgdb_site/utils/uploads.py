@@ -19,7 +19,7 @@ from ..models import Pack, Song, Chart, ImageFile
 from .charts import (
     get_hash, get_assets, get_pack_banner_path, get_song_lengths
 )
-from .analysis import SongAnalyzer
+from .analysis import SongAnalyzer, get_chart_key
 
 logger = get_task_logger('itgdb_site.tasks')
 
@@ -180,8 +180,17 @@ def upload_song(
         s.jacket = _get_image(assets['JACKET'], img_parent, image_cache)
         s.save()
 
+    # upload the charts for this song.
+    # try not to upload multiple charts for the same stepstype and difficulty
+    # slot (unless it is an edit chart, then we also consider description)
+    # TODO: see if description is necessary or sufficient to distinguish
+    # between edit charts?
+    chart_keys_already_uploaded = set()
     for chart in sim.charts:
-        upload_chart(chart, s, song_analyzer)
+        chart_key = get_chart_key(chart)
+        if chart_key not in chart_keys_already_uploaded:
+            upload_chart(chart, s, song_analyzer)
+            chart_keys_already_uploaded.add(chart_key)
 
 
 def upload_chart(chart: SimfileChart, s: Song, song_analyzer: SongAnalyzer):

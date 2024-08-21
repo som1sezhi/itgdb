@@ -27,6 +27,18 @@ DEFAULT_GROUP_NOTE_TYPES = frozenset((
 ))
 
 
+def get_chart_key(chart: Chart) -> Tuple[str]:
+    """Given a chart, returns a tuple that we want to be unique for all
+    charts of a particular song.
+    """
+    steps_type = (chart.stepstype or '').lower()
+    diff = (chart.difficulty or '').lower()
+    if diff == 'edit':
+        desc = (chart.description or '').lower()
+        return (steps_type, diff, desc)
+    return (steps_type, diff)
+
+
 @dataclass
 class StreamRun:
     start: int
@@ -40,15 +52,10 @@ class SongAnalyzer:
         self.sim = sim
         self.chart_analyzers: Dict[tuple, ChartAnalyzer] = {}
         for chart in sim.charts:
-            self.chart_analyzers[self._chart_key(chart)] = ChartAnalyzer(
-                chart, self
-            )
-
-    @staticmethod
-    def _chart_key(chart: Chart):
-        return (
-            chart.stepstype, chart.difficulty, chart.meter, chart.description
-        )
+            key = get_chart_key(chart)
+            # don't overwrite if already present
+            if key not in self.chart_analyzers:
+                self.chart_analyzers[key] = ChartAnalyzer(chart, self)
 
     @cached_property
     def chart_len(self) -> float:
@@ -85,7 +92,7 @@ class SongAnalyzer:
         return chart_end
     
     def get_chart_analyzer(self, chart: Chart) -> 'ChartAnalyzer':
-        return self.chart_analyzers[self._chart_key(chart)]
+        return self.chart_analyzers[get_chart_key(chart)]
     
     def get_chart_len(self):
         return self.chart_len

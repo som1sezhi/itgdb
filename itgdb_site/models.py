@@ -200,6 +200,17 @@ class Chart(models.Model):
             models.Index(fields=['difficulty']),
             models.Index(fields=['meter']),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['song', 'steps_type', 'difficulty', 'description'],
+                name='cannot_have_multiple_charts_of_same_diff_slot_and_desc'
+            ),
+            models.UniqueConstraint(
+                fields=['song', 'steps_type', 'difficulty'],
+                condition=~models.Q(difficulty=5),
+                name='cannot_have_multiple_non_edit_charts_in_same_diff_slot'
+            ),
+        ]
 
     @staticmethod
     def steps_type_to_int(steps_type: str):
