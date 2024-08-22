@@ -107,6 +107,7 @@ def _find_case_sensitive_path(dir: str, insensitive_path: str):
 def _get_full_validated_asset_path(sim_dir_path: str, path: str):
     if not path:
         return None
+    path = path.strip()
     pack_path = os.path.dirname(sim_dir_path)
     insensitive_full_path = os.path.normpath(os.path.join(sim_dir_path, path))
     # get the true, case-sensitive path to the asset.

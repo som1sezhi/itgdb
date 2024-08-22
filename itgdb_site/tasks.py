@@ -254,7 +254,7 @@ def update_analyses(self, form_data):
                         difficulty=Chart.difficulty_str_to_int(
                             chart.difficulty
                         ),
-                        description=chart.description or ''
+                        description=(chart.description or '').strip()
                     )
                 except Chart.DoesNotExist:
                     continue

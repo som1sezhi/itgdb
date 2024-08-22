@@ -214,11 +214,11 @@ class Chart(models.Model):
 
     @staticmethod
     def steps_type_to_int(steps_type: str):
-        return Chart.STEPS_TYPE_MAPPING.get(steps_type)
+        return Chart.STEPS_TYPE_MAPPING.get(steps_type.strip())
 
     @staticmethod
     def difficulty_str_to_int(diff: str):
-        diff = diff.lower()
+        diff = diff.lower().strip()
         return Chart.DIFFICULTY_MAPPING.get(diff)
     
     def __str__(self):

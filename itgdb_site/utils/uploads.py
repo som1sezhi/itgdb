@@ -81,6 +81,15 @@ def _get_image(path, parent_obj, cache, generate_thumbnail=False):
     return None
 
 
+# match the behavior of NotesLoader::GetMainAndSubTitlesFromFullTitle()
+def _get_title_and_subtitles_from_full_title(full_title: str):
+    for sep in ('\t', ' -', ' ~', ' (', ' ['):
+        i = full_title.find(sep)
+        if i >= 0:
+            return full_title[:i], full_title[i + 1:]
+    return full_title, ''
+
+
 def upload_pack(
     simfile_pack: SimfilePack,
     pack_data: dict,
@@ -148,16 +157,25 @@ def upload_song(
 
     sim_uuid = uuid.uuid4()
 
+    # matching the behavior of TidyUpData() in Song.cpp
+    title = (sim.title or '').strip()
+    subtitle = (sim.subtitle or '').strip()
+    artist = (sim.artist or '').strip()
+    if not title:
+        # if title is empty, stepmania pulls from the directory name instead
+        basename = os.path.basename(simfile_dir.simfile_dir)
+        title, subtitle = _get_title_and_subtitles_from_full_title(basename)
+
     with open(sim_path, 'rb') as f:
         s = Song(
             pack = p,
-            title = sim.title or '',
-            subtitle = sim.subtitle or '',
-            artist = sim.artist or '',
+            title = title,
+            subtitle = subtitle,
+            artist = artist,
             title_translit = sim.titletranslit or '',
             subtitle_translit = sim.subtitletranslit or '',
             artist_translit = sim.artisttranslit or '',
-            credit = sim.credit or '',
+            credit = (sim.credit or '').strip(),
             min_bpm = bpm_range[0],
             max_bpm = bpm_range[1],
             min_display_bpm = disp_range[0],
@@ -224,13 +242,15 @@ def upload_chart(chart: SimfileChart, s: Song, song_analyzer: SongAnalyzer):
         'stream_info': analyzer.get_stream_info(),
     }
     
+    # stepmania trims whitespace from description and chartname,
+    # but not credit. thanks stepmania
     s.chart_set.create(
         steps_type = steps_type,
         difficulty = difficulty,
         meter = meter,
         credit = chart.get('CREDIT', ''),
-        description = chart.description or '',
-        chart_name = chart.get('CHARTNAME', ''),
+        description = (chart.description or '').strip(),
+        chart_name = (chart.get('CHARTNAME', '')).strip(),
         chart_hash = chart_hash,
         analysis = analysis,
         release_date = s.release_date,
