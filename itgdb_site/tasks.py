@@ -1,7 +1,7 @@
 import os
 import shutil
 import zipfile
-import mimetypes
+import uuid
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.db import transaction
@@ -225,48 +225,58 @@ def update_analyses(self, form_data):
         )
 
         file = song.simfile
+        ext = file.name.rsplit('.', 1)[1]
+        tmp_path = os.path.join(settings.MEDIA_ROOT, f'{uuid.uuid4()}.{ext}')
         try:
-            with file.open(mode='r') as f:
-                sim = simfile.load(f, strict=False)
-                song_analyzer = SongAnalyzer(sim)
+            # copy simfile contents to a temp file on disk so that we can
+            # use simfile.open() with its encoding autodetection
+            with file.open(mode='rb') as f, open(tmp_path, 'wb') as tmp:
+                shutil.copyfileobj(f, tmp)
 
-                if should_update['chart_length']:
-                    chart_len = song_analyzer.get_chart_len()
-                    song.chart_length = chart_len
-                
-                if not iterate_thru_charts:
-                    song.save()
+            sim = simfile.open(tmp_path, strict=False)
+            song_analyzer = SongAnalyzer(sim)
+
+            if should_update['chart_length']:
+                chart_len = song_analyzer.get_chart_len()
+                song.chart_length = chart_len
+                song.save()
+            
+            # skip iterating through charts if we don't need to
+            if not iterate_thru_charts:
+                continue
+
+            for chart in sim.charts:
+                try:
+                    chart_obj = song.chart_set.get(
+                        steps_type=Chart.steps_type_to_int(
+                            chart.stepstype
+                        ),
+                        difficulty=Chart.difficulty_str_to_int(
+                            chart.difficulty
+                        ),
+                        description=chart.description or ''
+                    )
+                except Chart.DoesNotExist:
                     continue
 
-                for chart in sim.charts:
-                    try:
-                        chart_obj = song.chart_set.get(
-                            steps_type=Chart.steps_type_to_int(
-                                chart.stepstype
-                            ),
-                            difficulty=Chart.difficulty_str_to_int(
-                                chart.difficulty
-                            ),
-                            description=chart.description or ''
-                        )
-                    except Chart.DoesNotExist:
-                        continue
+                chart_analyzer = \
+                    song_analyzer.get_chart_analyzer(chart)
 
-                    chart_analyzer = \
-                        song_analyzer.get_chart_analyzer(chart)
-
-                    if should_update['stream_info']:
-                        stream_info = chart_analyzer.get_stream_info()
-                        chart_obj.analysis['stream_info'] = stream_info
-                    
-                    if should_update['counts']:
-                        counts = chart_analyzer.get_counts()
-                        for k, v in counts.items():
-                            setattr(chart_obj, k + '_count', v)
-                    
-                    chart_obj.save()
+                if should_update['stream_info']:
+                    stream_info = chart_analyzer.get_stream_info()
+                    chart_obj.analysis['stream_info'] = stream_info
+                
+                if should_update['counts']:
+                    counts = chart_analyzer.get_counts()
+                    for k, v in counts.items():
+                        setattr(chart_obj, k + '_count', v)
+                
+                chart_obj.save()
                         
         except FileNotFoundError:
             continue
-        
-        song.save()
+        finally:
+            # cleanup temp file
+            if os.path.isfile(tmp_path):
+                os.remove(tmp_path)
+            
