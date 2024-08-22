@@ -203,21 +203,23 @@ def process_pack_from_web(self, pack_data_list, source_link):
         shutil.rmtree(extract_path)
 
 
+# this task is pretty messy...
+# it's basically an ad-hoc way of collectng/updating data for every song/chart
+# in the db whenever i make changes to how charts are analyzed
 @shared_task(bind=True)
 def update_analyses(self, form_data):
-    which = form_data['which']
+    to_update = set(form_data['which'])
     prog_tracker = ProgressTracker(self)
     song_count = Song.objects.count()
 
     # if no fields are specified, update nothing
-    if not which:
+    if not to_update:
         return
     
-    should_update = {
-        k: k in which for k in ('chart_length', 'stream_info', 'counts')
-    }
-    # figure out whether we need to iterate through all charts as well as songs
-    iterate_thru_charts = should_update['stream_info'] or should_update['counts']
+    ret = []
+    
+    # figure out whether we need to access Chart model instances
+    need_chart_obj = bool({'stream_info', 'counts'} & to_update)
 
     for i, song in enumerate(Song.objects.all()):
         prog_tracker.update_progress(
@@ -236,16 +238,26 @@ def update_analyses(self, form_data):
             sim = simfile.open(tmp_path, strict=False)
             song_analyzer = SongAnalyzer(sim)
 
-            if should_update['chart_length']:
+            if 'chart_length' in to_update:
                 chart_len = song_analyzer.get_chart_len()
                 song.chart_length = chart_len
                 song.save()
-            
-            # skip iterating through charts if we don't need to
-            if not iterate_thru_charts:
-                continue
 
             for chart in sim.charts:
+                if 'unusual_diff_check' in to_update:
+                    diff = (chart.difficulty or '').lower().strip()
+                    usual_diffs = Chart.DIFFICULTY_CHOICES.values()
+                    if diff not in usual_diffs:
+                        ret.append([
+                            song.id,
+                            song.pack.name if song.pack else '',
+                            song.title,
+                            diff
+                        ])
+
+                if not need_chart_obj:
+                    continue
+
                 try:
                     chart_obj = song.chart_set.get(
                         steps_type=Chart.steps_type_to_int(
@@ -262,11 +274,11 @@ def update_analyses(self, form_data):
                 chart_analyzer = \
                     song_analyzer.get_chart_analyzer(chart)
 
-                if should_update['stream_info']:
+                if 'stream_info' in to_update:
                     stream_info = chart_analyzer.get_stream_info()
                     chart_obj.analysis['stream_info'] = stream_info
                 
-                if should_update['counts']:
+                if 'counts' in to_update:
                     counts = chart_analyzer.get_counts()
                     for k, v in counts.items():
                         setattr(chart_obj, k + '_count', v)
@@ -279,4 +291,6 @@ def update_analyses(self, form_data):
             # cleanup temp file
             if os.path.isfile(tmp_path):
                 os.remove(tmp_path)
+    
+    return ret
             

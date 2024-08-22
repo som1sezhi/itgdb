@@ -33,7 +33,8 @@ class UpdateAnalysesForm(forms.Form):
         choices={
             'chart_length': 'chart_length',
             'stream_info': 'stream_info',
-            'counts': 'counts'
+            'counts': 'counts',
+            'unusual_diff_check': 'unusual_diff_check'
         }
     )
 

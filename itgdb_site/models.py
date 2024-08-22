@@ -167,9 +167,27 @@ class Chart(models.Model):
         5: 'edit'
     }
     STEPS_TYPE_MAPPING = {v: k for k, v in STEPS_TYPE_CHOICES.items()}
-    DIFFICULTY_MAPPING = dict(
+    DIFFICULTY_MAPPING = {
         **{v: k for k, v in DIFFICULTY_CHOICES.items()},
-    )
+        # see OldStyleStringToDifficultyMapHolder in Difficulty.cpp
+        # in the stepmania source
+        # easy
+        'basic': 1,
+        'light': 1,
+        # medium
+        'another': 2,
+        'trick': 2,
+        'standard': 2,
+        'difficult': 2,
+        # hard
+        'ssr': 3,
+        'maniac': 3,
+        'heavy': 3,
+        # challenge
+        'smaniac': 4,
+        'expert': 4,
+        'oni': 4,
+    }
 
     song = models.ForeignKey(Song, on_delete=models.CASCADE)
     steps_type = models.SmallIntegerField(choices=STEPS_TYPE_CHOICES)
