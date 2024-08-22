@@ -148,13 +148,15 @@
   const chartData = {};
   for (let i = 1; i <= 2; i++) {
     const data = difficultyData[i];
-    chartData[i] = {
-      labels: data.labels,
-      datasets: data.datasets.map(
-        (dataset) => ({
-          ...dataset,
-          backgroundColor: diffColors[dataset.diff_num],
-        })),
+    if (data.datasets.length > 0) {
+      chartData[i] = {
+        labels: data.labels,
+        datasets: data.datasets.map(
+          (dataset) => ({
+            ...dataset,
+            backgroundColor: diffColors[dataset.diff_num],
+          })),
+      };
     }
   }
   const defaultIdx = chartData[1] ? 1 : 2;
