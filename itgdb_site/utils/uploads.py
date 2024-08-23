@@ -2,17 +2,15 @@
 """
 
 import os
-import mimetypes
+import magic
 import uuid
 from collections import namedtuple
 from django.core.files import File
-from django.utils import timezone
 from simfile.dir import SimfilePack, SimfileDirectory
 from simfile.timing.displaybpm import displaybpm
 from simfile.types import Simfile, Chart as SimfileChart
 from celery.utils.log import get_task_logger
 import cv2
-from sorl.thumbnail import get_thumbnail
 from PIL import Image
 
 from ..models import Pack, Song, Chart, ImageFile
@@ -42,7 +40,7 @@ def _get_image(path, parent_obj, cache, generate_thumbnail=False):
     if path in cache:
         return cache[path]
     
-    mimetype = mimetypes.guess_type(path)[0]
+    mimetype = magic.from_file(path, mime=True)
     img_path = None
     if mimetype.startswith('image'):
         img_path = path 

@@ -28,6 +28,7 @@ channels = {extras = ["daphne"], version = "*"}
 channels-redis = "*"
 patool = "*"
 sentry-sdk = {extras = ["django"], version = "*"}
+python-magic = "*"
 
 [dev-packages]
 localstack = "*"
