@@ -17,7 +17,7 @@ def fetch_from_url(url: str) -> str:
     path = os.path.join(dir_path, filename)
 
     # fetch from google drive
-    if re.match('https?://drive.google.com/file/d/', url):
+    if re.match('https?://drive.google.com/', url):
         return gdown.download(url=url, output=path, fuzzy=True, quiet=True)
 
     # fetch from mega
