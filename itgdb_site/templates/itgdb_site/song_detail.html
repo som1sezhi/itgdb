@@ -106,7 +106,7 @@
 
     <p class="mb-1">
     {% for link_label, link_url in links %}
-      <a href="{{ link_url }}" target="_blank" rel="noopener noreferrer">
+      <a href="{{ link_url }}" target="_blank" rel="noopener noreferrer nofollow">
           {{ link_label }}
       </a>
       {% if not forloop.last %}
