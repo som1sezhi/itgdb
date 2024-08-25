@@ -132,7 +132,15 @@ class ChartAnalyzer:
             columns = 8 if chart.stepstype == 'dance-double' else 4
             notes_str = ('0' * columns + '\n') * 4
             self.notes = NoteData(notes_str)
-        self.engine = TimingEngine(TimingData(self.sim, chart))
+
+        timing_data = TimingData(self.sim, chart)
+        # filter out 0 bpm segments to prevent problems down the line,
+        # and also to match stepmania's behavior
+        timing_data.bpms = BeatValues(
+            bpm for bpm in timing_data.bpms if bpm.value != 0
+        )
+        self.engine = TimingEngine(timing_data)
+
         self.song_analyzer = song_analyzer
 
     @cached_property

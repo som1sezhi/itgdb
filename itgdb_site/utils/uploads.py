@@ -7,7 +7,7 @@ import uuid
 from collections import namedtuple
 from django.core.files import File
 from simfile.dir import SimfilePack, SimfileDirectory
-from simfile.timing.displaybpm import displaybpm
+from simfile.timing.displaybpm import displaybpm, BeatValues
 from simfile.types import Simfile, Chart as SimfileChart
 from celery.utils.log import get_task_logger
 import cv2
@@ -148,10 +148,18 @@ def upload_song(
         return
     music_len, chart_len = song_lengths
 
+    # bit of a hack: temporarily filter out 0 bpm segments to match the 
+    # behavior of stepmania
+    old_bpms = sim.bpms
+    if old_bpms is not None:
+        sim.bpms = str(BeatValues(
+            bpm for bpm in BeatValues.from_str(old_bpms) if bpm.value != 0
+        ))
     bpm = displaybpm(sim, ignore_specified=True)
     disp = displaybpm(sim)
     bpm_range = (bpm.min, bpm.max)
     disp_range = (disp.min, disp.max)
+    sim.bpms = old_bpms # restore
 
     sim_uuid = uuid.uuid4()
 

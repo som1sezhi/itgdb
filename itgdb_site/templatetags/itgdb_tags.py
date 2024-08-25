@@ -23,7 +23,7 @@ def duration(value):
 
 @register.filter
 def display_bpm(song):
-    if not song.min_display_bpm or not song.max_display_bpm:
+    if song.min_display_bpm is None or song.max_display_bpm is None:
         return '?'
     elif song.min_display_bpm == song.max_display_bpm:
         return str(round(song.min_display_bpm))
