@@ -26,6 +26,9 @@ logger = logging.getLogger(__name__)
 
 @admin.register(Pack)
 class PackAdmin(ExtraButtonsMixin, admin.ModelAdmin):
+    search_fields = ['name']
+    raw_id_fields = ['banner']
+
     @button()
     def pack_upload(self, req):
         context = self.get_common_context(req)
@@ -172,6 +175,8 @@ class PackAdmin(ExtraButtonsMixin, admin.ModelAdmin):
 
 @admin.register(Song)
 class SongAdmin(ExtraButtonsMixin, admin.ModelAdmin):
+    raw_id_fields = ['pack', 'banner', 'bg', 'cdtitle', 'jacket']
+
     @button()
     def update_chart_analyses(self, req):
         context = self.get_common_context(req)
