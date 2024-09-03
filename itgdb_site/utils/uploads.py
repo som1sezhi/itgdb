@@ -252,12 +252,12 @@ def upload_chart(chart: SimfileChart, s: Song, song_analyzer: SongAnalyzer):
         steps_type = steps_type,
         difficulty = difficulty,
         meter = meter,
-        credit = chart.get('CREDIT', ''),
+        credit = chart.get('CREDIT') or '',
         description = (chart.description or '').strip(),
-        chart_name = (chart.get('CHARTNAME', '')).strip(),
+        chart_name = (chart.get('CHARTNAME') or '').strip(),
         chart_hash = chart_hash,
         analysis = analysis,
         release_date = s.release_date,
-        has_attacks = bool(chart.get('ATTACKS', '').strip()),
+        has_attacks = bool((chart.get('ATTACKS') or '').strip()),
         **counts
     )
