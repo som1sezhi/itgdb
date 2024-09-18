@@ -194,7 +194,7 @@ class Chart(models.Model):
     difficulty = models.SmallIntegerField(choices=DIFFICULTY_CHOICES)
     meter = models.IntegerField()
     credit = models.CharField(max_length=255, blank=True, default='')
-    description = models.CharField(max_length=255, blank=True, default='')
+    description = models.CharField(max_length=511, blank=True, default='')
     chart_name = models.CharField(max_length=255, blank=True, default='')
     chart_hash = models.CharField(max_length=40)
     release_date = models.DateTimeField(null=True, blank=True)
