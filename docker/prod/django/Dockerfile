@@ -37,7 +37,7 @@ RUN apt-get update \
     # Translations dependencies
     gettext \
     # for testing
-    iputils-ping \
+    iputils-ping curl \
     # for opening various file formats
     ffmpeg p7zip-full unar file \
     # for mimetype guessing
