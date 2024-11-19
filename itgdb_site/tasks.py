@@ -119,6 +119,26 @@ def _find_packs(pack_names, extracted_path):
     return packs_to_return
 
 
+def _extract_pack(file_path):
+    # TODO: likely susceptible to malicious zips (zip bombs, etc.)
+    try:
+        filename = os.path.basename(file_path)
+        extract_dir = filename.rsplit('.', 1)[0]
+        extract_path = os.path.join(settings.MEDIA_ROOT, 'extracted', extract_dir)
+        patoolib.extract_archive(
+            file_path, verbosity=-1, outdir=extract_path, interactive=False
+        )
+    except Exception as e:
+        # cleanup in case the extraction was partially complete before
+        # being interrupted
+        if os.path.exists(extract_path) and os.path.isdir(extract_path):
+            shutil.rmtree(extract_path)
+        raise e
+    finally:
+        os.remove(file_path)
+    return extract_path
+
+
 @shared_task(bind=True)
 def process_pack_upload(self, pack_data, filename):
     # TODO: error handling
@@ -126,14 +146,8 @@ def process_pack_upload(self, pack_data, filename):
     prog_tracker = ProgressTracker(self)
 
     prog_tracker.update_progress(0, f'Extracting {filename}')
-    file = default_storage.open(filename)
-    extract_dir = os.path.basename(filename).rsplit('.')[0]
-    extract_path = os.path.join(settings.MEDIA_ROOT, 'extracted', extract_dir)
-    # TODO: support for other archive types, maybe
-    # TODO: likely susceptible to malicious zips (zip bombs, etc.)
-    with zipfile.ZipFile(file) as z:
-        z.extractall(extract_path)
-    default_storage.delete(filename)
+    file_path = default_storage.path(filename)
+    extract_path = _extract_pack(file_path)
 
     try:
         # TODO: we assume that the zip contains only a pack directory, with all
@@ -159,22 +173,9 @@ def process_pack_from_web(self, pack_data_list, source_link):
     prog_tracker.update_progress(0, f'Downloading {source_link}')
     file_path = fetch_from_url(source_link)
 
-    try:
-        filename = os.path.basename(file_path)
-        prog_tracker.update_progress(0, f'Extracting {filename}')
-        extract_dir = filename.rsplit('.', 1)[0]
-        extract_path = os.path.join(settings.MEDIA_ROOT, 'extracted', extract_dir)
-        patoolib.extract_archive(
-            file_path, verbosity=-1, outdir=extract_path, interactive=False
-        )
-    except Exception as e:
-        # cleanup in case the extraction was partially complete before
-        # being interrupted
-        if os.path.exists(extract_path) and os.path.isdir(extract_path):
-            shutil.rmtree(extract_path)
-        raise e
-    finally:
-        os.remove(file_path)
+    filename = os.path.basename(file_path)
+    prog_tracker.update_progress(0, f'Extracting {filename}')
+    extract_path = _extract_pack(file_path)
 
     try:
         pack_names = [data['name'] for data in pack_data_list]

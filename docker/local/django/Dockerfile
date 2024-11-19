@@ -31,6 +31,9 @@ COPY --from=builder /.venv /.venv
 # set venv python as the "default" python
 ENV PATH="/.venv/bin:$PATH"
 
+# add nonfree repo section to sources (for unrar)
+RUN sed -i 's/$/ contrib non-free/' /etc/apt/sources.list
+
 RUN apt-get update \
     # psycopg2 dependencies
     && apt-get install -y libpq-dev \
@@ -39,7 +42,7 @@ RUN apt-get update \
     # for testing
     iputils-ping procps strace \
     # for opening various file formats
-    ffmpeg p7zip-full unar file \
+    ffmpeg p7zip-full unrar file \
     # for mimetype guessing
     mime-support
 
