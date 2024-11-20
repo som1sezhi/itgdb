@@ -211,8 +211,7 @@ def process_pack_from_web(self, pack_data_list, source_link):
                     ProgressTrackingInfo(prog_tracker, i, num_packs)
                 )
     finally:
-        #shutil.rmtree(extract_path)
-        pass
+        shutil.rmtree(extract_path)
 
 
 # this task is pretty messy...
