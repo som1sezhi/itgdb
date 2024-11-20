@@ -1,6 +1,6 @@
 import os
 import shutil
-import zipfile
+import re
 import uuid
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -13,6 +13,7 @@ from celery.utils.log import get_task_logger
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 import patoolib
+import gdown
 
 from .utils.uploads import upload_pack, ProgressTrackingInfo
 from .utils.url_fetch import fetch_from_url
@@ -171,11 +172,20 @@ def process_pack_from_web(self, pack_data_list, source_link):
     prog_tracker = ProgressTracker(self)
 
     prog_tracker.update_progress(0, f'Downloading {source_link}')
-    file_path = fetch_from_url(source_link)
-
-    filename = os.path.basename(file_path)
-    prog_tracker.update_progress(0, f'Extracting {filename}')
-    extract_path = _extract_pack(file_path)
+    # special case for google drive folder: no extract step needed
+    # TODO: maybe just put this logic in fetch_from_url (though it should then
+    # consistently return an already-extracted archive)
+    if re.match('https?://drive.google.com/drive/folders/', source_link):
+        dir_name = str(uuid.uuid4())
+        dir_path = str(settings.MEDIA_ROOT / 'extracted')
+        extract_path = os.path.join(dir_path, dir_name)
+        gdown.download_folder(source_link, output=extract_path, quiet=True)
+    
+    else:
+        file_path = fetch_from_url(source_link)
+        filename = os.path.basename(file_path)
+        prog_tracker.update_progress(0, f'Extracting {filename}')
+        extract_path = _extract_pack(file_path)
 
     try:
         pack_names = [data['name'] for data in pack_data_list]
@@ -201,7 +211,8 @@ def process_pack_from_web(self, pack_data_list, source_link):
                     ProgressTrackingInfo(prog_tracker, i, num_packs)
                 )
     finally:
-        shutil.rmtree(extract_path)
+        #shutil.rmtree(extract_path)
+        pass
 
 
 # this task is pretty messy...
