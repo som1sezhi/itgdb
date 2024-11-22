@@ -436,9 +436,9 @@ class SongSearchView(generic.ListView):
                 qset = qset.filter(pack__category=data['category'])
             
             if data['min_length']:
-                qset = qset.filter(length__gte=data['min_length'])
+                qset = qset.filter(chart_length__gte=data['min_length'])
             if data['max_length']:
-                qset = qset.filter(length__lte=data['max_length'])
+                qset = qset.filter(chart_length__lte=data['max_length'])
             if data['min_bpm']:
                 qset = qset.filter(min_display_bpm__gte=data['min_bpm'])
             if data['max_bpm']:
@@ -542,9 +542,9 @@ class ChartSearchView(generic.ListView):
                 qset = qset.filter(song__pack__category=data['category'])
             
             if data['min_length']:
-                qset = qset.filter(song__length__gte=data['min_length'])
+                qset = qset.filter(song__chart_length__gte=data['min_length'])
             if data['max_length']:
-                qset = qset.filter(song__length__lte=data['max_length'])
+                qset = qset.filter(song__chart_length__lte=data['max_length'])
             if data['min_bpm']:
                 qset = qset.filter(song__min_display_bpm__gte=data['min_bpm'])
             if data['max_bpm']:
