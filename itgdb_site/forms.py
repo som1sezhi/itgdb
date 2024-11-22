@@ -183,7 +183,8 @@ class SongSearchForm(forms.Form):
         choices={
             'title': 'Title',
             'release_date': 'Release date',
-            'upload_date': 'Upload date'
+            'upload_date': 'Upload date',
+            'chart_length': 'Length'
         }
     )
     order_dir = forms.ChoiceField(
@@ -307,7 +308,8 @@ class ChartSearchForm(forms.Form):
         required=False,
         choices={
             'title': 'Title',
-            'release_date': 'Release date'
+            'release_date': 'Release date',
+            'chart_length': 'Length'
         }
     )
     order_dir = forms.ChoiceField(

@@ -566,9 +566,13 @@ class ChartSearchView(generic.ListView):
                 if data['order_by'] == 'title':
                     # do case-insensitive sort
                     order_fields = [Upper('song__title')]
-                else: # release_date
+                elif data['order_by'] == 'release_date':
                     order_fields = [
                         F('release_date'), Upper('song__title')
+                    ]
+                else: # chart_length
+                    order_fields = [
+                        F('song__chart_length'), Upper('song__title')
                     ]
             else:
                 order_fields = [Upper('song__title')]
