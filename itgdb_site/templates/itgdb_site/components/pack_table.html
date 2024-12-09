@@ -1,5 +1,6 @@
 {% load thumbnail %}
 {% load mathfilters %}
+{% load itgdb_tags %}
 
 {% comment %}
 Recognized context variables:
@@ -68,7 +69,7 @@ Requires tables.css to be loaded.
             </i>&nbsp;
           </span>
           {% if pack.release_date %}
-            {{ pack.release_date|date:'M j, Y' }}
+            {{ pack|release_date }}
           {% else %}
             <span class="fst-italic text-muted">Unknown</span>
           {% endif %}

@@ -51,7 +51,7 @@ Requires tables.css to be loaded.
             </i>&nbsp;
           </span>
           {% if chart.release_date %}
-            {{ chart.release_date|date:'M j, Y' }}
+            {{ chart|release_date }}
           {% else %}
             <span class="fst-italic text-muted">Unknown</span>
           {% endif %}

@@ -81,7 +81,7 @@ Requires tables.css to be loaded.
             </i>&nbsp;
           </span>
           {% if song.release_date %}
-            {{ song.release_date|date:'M j, Y' }}
+            {{ song|release_date }}
           {% else %}
             <span class="fst-italic text-muted">Unknown</span>
           {% endif %}

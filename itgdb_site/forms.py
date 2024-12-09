@@ -20,7 +20,10 @@ class PackUploadForm(forms.ModelForm):
 
     class Meta:
         model = Pack
-        fields = ['name', 'author', 'release_date', 'category', 'tags', 'links']
+        fields = [
+            'name', 'author', 'release_date', 'release_date_year_only',
+            'category', 'tags', 'links'
+        ]
 
 
 class BatchUploadForm(forms.Form):

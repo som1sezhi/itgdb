@@ -38,6 +38,7 @@ class ParseBatchCsvIntoTasksTestClass(TestCase):
             'name': '',
             'author': '',
             'release_date': None,
+            'release_date_year_only': False,
             'category': None,
             'tags': [],
             'links': ''
@@ -55,6 +56,7 @@ class ParseBatchCsvIntoTasksTestClass(TestCase):
                 'name': 'Test Pack',
                 'author': 'Test Author',
                 'release_date': make_aware(datetime(2023, 1, 1, 9, 0, 0)),
+                'release_date_year_only': False,
                 'category': self.technical_cat.id,
                 'tags': [self.tag1.id, tag2.id],
                 'links': 'https://example.com/1\nLink 2\nhttps://example.com/2'
@@ -65,6 +67,7 @@ class ParseBatchCsvIntoTasksTestClass(TestCase):
                 'release_date': datetime(
                     2024, 7, 7, 12, 0, 0, tzinfo=timezone.utc
                 ),
+                'release_date_year_only': False,
                 'category': stamina_cat.id,
                 'tags': [tag2.id],
                 'links': 'Link 1\nhttps://test.com/1'
@@ -112,6 +115,10 @@ class ParseBatchCsvIntoTasksTestClass(TestCase):
             ([self._fill_pack_data(
                 release_date=make_aware(datetime(2023, 1, 1, 6, 0, 59))
             )], 'https://p4.com'),
+            ([self._fill_pack_data(
+                release_date=datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc),
+                release_date_year_only=True
+            )], 'https://p5.com'),
         ])
 
     def test_links(self):

@@ -112,10 +112,16 @@ class PackAdmin(ExtraButtonsMixin, admin.ModelAdmin):
             # process row into a pack_data dict fit for consumption
             # by the celery task
 
+            release_date_year_only = False # default value
             if not row[2]:
                 release_date = None
+            # first, try parsing as just a release year
+            elif row[2].isdigit():
+                year = int(row[2])
+                release_date = datetime(year, 1, 1, 12, 0, tzinfo=timezone.utc)
+                release_date_year_only = True
             else:
-                # first, try parsing as a date (datetime will return None)
+                # next, try parsing as a date (datetime will return None)
                 release_date = parse_date(row[2])
                 if release_date:
                     # if good, set the time to midday utc.
@@ -159,6 +165,7 @@ class PackAdmin(ExtraButtonsMixin, admin.ModelAdmin):
                 'name': row[0],
                 'author': row[1],
                 'release_date': release_date,
+                'release_date_year_only': release_date_year_only,
                 'category': category_id,
                 'tags': tag_ids,
                 'links': '\n'.join(links)

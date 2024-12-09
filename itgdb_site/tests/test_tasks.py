@@ -36,6 +36,7 @@ class ProcessPackFromWebTestClass(SerializeMixin, TestCase):
             'name': '',
             'author': '',
             'release_date': None,
+            'release_date_year_only': False,
             'category': None,
             'tags': [],
             'links': ''

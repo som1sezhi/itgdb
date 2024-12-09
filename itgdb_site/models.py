@@ -69,6 +69,7 @@ class Pack(models.Model):
     name = models.CharField(max_length=255, blank=True)
     author = models.CharField(max_length=255, blank=True)
     release_date = models.DateTimeField(blank=True, null=True)
+    release_date_year_only = models.BooleanField(default=False)
     upload_date = models.DateTimeField(blank=True, null=True, auto_now_add=True)
     category = models.ForeignKey(
         PackCategory, on_delete=models.SET_NULL, blank=True, null=True
@@ -79,6 +80,17 @@ class Pack(models.Model):
         ImageFile, on_delete=models.SET_NULL, related_name='banner_packs',
         blank=True, null=True
     )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(release_date_year_only=False) | \
+                    models.Q(release_date__isnull=False)
+                ),
+                name='cannot_limit_pack_date_to_only_the_year_if_date_is_null'
+            )
+        ]
 
     def __str__(self):
         return self.name
@@ -100,6 +112,7 @@ class Song(models.Model):
     music_length = models.FloatField() # should be equiv. to MusicLengthSeconds
     chart_length = models.FloatField() # should be equiv. to GetLastSecond
     release_date = models.DateTimeField(null=True, blank=True)
+    release_date_year_only = models.BooleanField(default=False)
     upload_date = models.DateTimeField(null=True, blank=True, auto_now_add=True)
     links = models.TextField(blank=True, default='')
     simfile = models.FileField(storage=get_simfiles_storage)
@@ -130,6 +143,13 @@ class Song(models.Model):
             models.CheckConstraint(
                 check=models.Q(pack__isnull=True) | models.Q(links__exact=''),
                 name='links_only_for_singles'
+            ),
+            models.CheckConstraint(
+                check=(
+                    models.Q(release_date_year_only=False) | \
+                    models.Q(release_date__isnull=False)
+                ),
+                name='cannot_limit_song_date_to_only_the_year_if_date_is_null'
             )
         ]
 
@@ -198,6 +218,7 @@ class Chart(models.Model):
     chart_name = models.CharField(max_length=255, blank=True, default='')
     chart_hash = models.CharField(max_length=40)
     release_date = models.DateTimeField(null=True, blank=True)
+    release_date_year_only = models.BooleanField(default=False)
     upload_date = models.DateTimeField(null=True, blank=True, auto_now_add=True)
     analysis = models.JSONField()
     has_attacks = models.BooleanField(default=False)
@@ -228,6 +249,13 @@ class Chart(models.Model):
                 condition=~models.Q(difficulty=5),
                 name='cannot_have_multiple_non_edit_charts_in_same_diff_slot'
             ),
+            models.CheckConstraint(
+                check=(
+                    models.Q(release_date_year_only=False) | \
+                    models.Q(release_date__isnull=False)
+                ),
+                name='cannot_limit_chart_date_to_only_the_year_if_date_is_null'
+            )
         ]
 
     @staticmethod

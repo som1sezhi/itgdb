@@ -7,7 +7,7 @@ from django.core.files.storage.memory import InMemoryStorage
 from simfile.dir import SimfilePack
 from storages.backends.s3 import S3Storage
 
-from ..models import Tag, PackCategory, Pack, ImageFile, Song
+from ..models import Tag, PackCategory, Pack, ImageFile, Song, Chart
 from ..utils.uploads import upload_pack
 from ._common import open_test_pack
 
@@ -50,14 +50,18 @@ class UploadPackTestClass(TestCase):
         # test a regular upload of a pack with 2 songs
         # - check that the pack contains the correct data
         # - check that songs and charts are also uploaded
+        #   - check that release_date and release_date_year_only are propagated
+        #     from pack to songs/charts correctly
         # - check that images are uploaded correctly
         #   - pack and song2 banner image should be the same object
         #   - pack/song2 banner is 100x70, song1 banner is 100x100
         simfile_pack = open_test_pack('UploadPack_test_upload')
+        expected_release_date = datetime(2022, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
         pack_data = {
             'name': 'Test Pack',
             'author': 'Author 1, Author 2',
-            'release_date': datetime(2022, 1, 1, 13, 0, 0, tzinfo=timezone.utc),
+            'release_date': expected_release_date,
+            'release_date_year_only': True,
             'category': self.pack_category.id,
             'tags': [tag.id for tag in self.tags],
             'links': 'https://example.com\nLink 2\nhttps://example.com/2'
@@ -80,6 +84,13 @@ class UploadPackTestClass(TestCase):
         song2 = pack.song_set.get(title='song2')
         self.assertEqual(1, len(song1.chart_set.all()))
         self.assertEqual(1, len(song2.chart_set.all()))
+        # check release dates
+        for song in pack.song_set.all():
+            self.assertEqual(expected_release_date, song.release_date)
+            self.assertTrue(song.release_date_year_only)
+        for chart in Chart.objects.filter(song__pack=pack):
+            self.assertEqual(expected_release_date, chart.release_date)
+            self.assertTrue(chart.release_date_year_only)
         # check images
         song1_bn = song1.banner
         song2_bn = song2.banner
@@ -92,12 +103,14 @@ class UploadPackTestClass(TestCase):
         # test an upload with minimal supplied data (most fields are empty).
         # - name should be autofilled with name of pack directory
         # - upload_date should be filled
+        # - release_date_year_only is required (we set to False)
         # - other fields should be empty/null
         simfile_pack = open_test_pack('UploadPack_test_minimal_data')
         pack_data = {
             'name': '',
             'author': '',
             'release_date': None,
+            'release_date_year_only': False,
             'category': None,
             'tags': [],
             'links': ''

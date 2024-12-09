@@ -195,6 +195,7 @@ def process_pack_from_web(self, pack_data_list, source_link):
             # sometimes, unar will create an additional directory within
             # the extraction destination and extract all the files into there.
             # check that directory first
+            # TODO: check if this is still necessary after switching to unrar
             contents = os.listdir(extract_path)
             if len(contents) == 1 and os.path.isdir(
                 new_extract_path := os.path.join(extract_path, contents[0])

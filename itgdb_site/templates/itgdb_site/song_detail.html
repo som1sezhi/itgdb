@@ -43,7 +43,7 @@
       {% if song.release_date %}
       <tr>
         <th scope="row">Release date</th>
-        <td>{{ song.release_date|date }}</td>
+        <td>{{ song|release_date }}</td>
       </tr>
       {% endif %}
       {% if song.title_translit or song.subtitle_translit %}
@@ -221,7 +221,7 @@
         {% if chart.release_date %}
           <tr>
             <th scope="row">Release date</th>
-            <td>{{ chart.release_date|date }}</td>
+            <td>{{ chart|release_date }}</td>
           </tr>
         {% endif %}
           <tr>

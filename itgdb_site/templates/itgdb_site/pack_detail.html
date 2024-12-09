@@ -1,6 +1,7 @@
 {% extends 'itgdb_site/base.html' %}
 {% load static %}
 {% load thumbnail %}
+{% load itgdb_tags %}
 
 {% block title %}{{ pack.name }}{% endblock %}
 
@@ -39,7 +40,7 @@
           {% if pack.release_date %}
           <tr>
             <th scope="row">Release date</th>
-            <td>{{ pack.release_date|date }}</td>
+            <td>{{ pack|release_date }}</td>
           </tr>
           {% endif %}
           {% if pack.category %}

@@ -100,6 +100,7 @@ def upload_pack(
         name = pack_data['name'] or simfile_pack.name,
         author = pack_data['author'],
         release_date = pack_data['release_date'],
+        release_date_year_only = pack_data['release_date_year_only'],
         category_id = pack_data['category'],
         links = pack_data['links']
     )
@@ -189,6 +190,7 @@ def upload_song(
             music_length = music_len,
             chart_length = chart_len,
             release_date = p.release_date if p else None,
+            release_date_year_only = p.release_date_year_only,
             simfile = File(f, name=f'{sim_uuid}_{sim_filename}'),
             has_bgchanges = bool((sim.bgchanges or '').strip()),
             has_fgchanges = bool((sim.fgchanges or '').strip()),
@@ -258,6 +260,7 @@ def upload_chart(chart: SimfileChart, s: Song, song_analyzer: SongAnalyzer):
         chart_hash = chart_hash,
         analysis = analysis,
         release_date = s.release_date,
+        release_date_year_only = s.release_date_year_only,
         has_attacks = bool((chart.get('ATTACKS') or '').strip()),
         **counts
     )

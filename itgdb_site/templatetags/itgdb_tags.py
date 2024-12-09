@@ -1,6 +1,7 @@
 import re
 from django import template
 from django.utils.html import escape
+from django.template.defaultfilters import date as date_filter
 
 register = template.Library()
 
@@ -56,6 +57,12 @@ def chart_diff_long(chart):
     diff_mapping = ['Novice', 'Easy', 'Medium', 'Hard', 'Expert', 'Edit']
     return steps_type_mapping[chart.steps_type] + ' ' + \
         diff_mapping[chart.difficulty]
+
+@register.filter
+def release_date(obj):
+    if obj.release_date_year_only:
+        return str(obj.release_date.year)
+    return date_filter(obj.release_date, 'M j, Y')
 
 # https://stackoverflow.com/questions/48482319/django-pagination-url
 PAGE_NUMBER_REGEX = re.compile(r'(page=[0-9]*[\&]*)')
