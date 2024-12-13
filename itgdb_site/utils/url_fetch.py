@@ -22,7 +22,7 @@ def _fetch_from_sm_online(url: str) -> str:
     soup = BeautifulSoup(content, 'html.parser')
     link = soup.find('a', string='Mirror')['href']
     assert link.startswith('/static/new/')
-    return fetch_from_url('https?://search.stepmaniaonline.net' + link)
+    return fetch_from_url('https://search.stepmaniaonline.net' + link)
     
 
 def fetch_from_url(url: str) -> str:
