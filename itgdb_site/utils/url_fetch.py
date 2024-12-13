@@ -9,7 +9,21 @@ import uuid
 from django.conf import settings
 import gdown
 from mega import Mega
+from bs4 import BeautifulSoup
 
+
+def _fetch_from_sm_online(url: str) -> str:
+    req = urllib.request.Request(url)
+    req.add_header(
+        'User-Agent',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
+    )
+    content = urllib.request.urlopen(req).read()
+    soup = BeautifulSoup(content, 'html.parser')
+    link = soup.find('a', string='Mirror')['href']
+    assert link.startswith('/static/new/')
+    return fetch_from_url('https?://search.stepmaniaonline.net' + link)
+    
 
 def fetch_from_url(url: str) -> str:
     filename = str(uuid.uuid4())
@@ -25,6 +39,10 @@ def fetch_from_url(url: str) -> str:
         mega = Mega()
         m = mega.login()
         return str(m.download_url(url, dir_path, filename))
+    
+    # fetch from stepmaniaonline
+    elif re.match('https?://search.stepmaniaonline.net/pack/id/', url):
+        return _fetch_from_sm_online(url)
     
     # fetch from dropbox
     elif re.match('https?://www.dropbox.com/', url):
