@@ -15,7 +15,7 @@ from asgiref.sync import async_to_sync
 import patoolib
 import gdown
 
-from .utils.uploads import upload_pack, ProgressTrackingInfo
+from .utils.uploads import upload_pack, ProgressTrackingInfo, delete_dupe_sims
 from .utils.url_fetch import fetch_from_url
 from .utils.analysis import SongAnalyzer
 from .models import Song, Chart
@@ -69,6 +69,7 @@ class ProgressTracker:
 
 def _open_pack_if_exists(dir_path):
     simfile_pack = SimfilePack(dir_path)
+    delete_dupe_sims(simfile_pack)
     # check if this directory is actually a pack directory by checking
     # if simfiles are present
     if next(simfile_pack.simfile_dirs(), None) is None:
@@ -151,16 +152,14 @@ def process_pack_upload(self, pack_data, filename):
     extract_path = _extract_pack(file_path)
 
     try:
-        # TODO: we assume that the zip contains only a pack directory, with all
-        # the song folders inside. is this a good assumption?
-        pack_name = next(os.walk(extract_path))[1][0]
-        pack_path = os.path.join(extract_path, pack_name)
+        packs = _find_packs([pack_data['name']], extract_path)
+        assert len(packs) == 1
+
         # TODO: handle uploaded image/sim files better on rollback
         # https://github.com/un1t/django-cleanup/issues/43
         with transaction.atomic():
-            simfile_pack = SimfilePack(pack_path)
             upload_pack(
-                simfile_pack, pack_data,
+                packs[0], pack_data,
                 ProgressTrackingInfo(prog_tracker, 0, 1)
             )
     finally:

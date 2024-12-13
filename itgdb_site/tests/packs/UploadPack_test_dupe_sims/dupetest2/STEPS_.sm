@@ -1,0 +1,37 @@
+#TITLE:dupetest2 FAKE;
+#SUBTITLE:;
+#ARTIST:;
+#TITLETRANSLIT:;
+#SUBTITLETRANSLIT:;
+#ARTISTTRANSLIT:;
+#GENRE:;
+#CREDIT:;
+#MUSIC:click.ogg;
+#BANNER:;
+#BACKGROUND:;
+#CDTITLE:;
+#SAMPLESTART:0.000;
+#SAMPLELENGTH:0.000;
+#SELECTABLE:YES;
+#OFFSET:0.000;
+#BPMS:0.000=120.000;
+#STOPS:;
+#BGCHANGES:;
+#FGCHANGES:;
+//--------------- dance-single -  ----------------
+#NOTES:
+     dance-single:
+     :
+     Challenge:
+     1:
+     0,0,0,0,0:
+1000
+0100
+0010
+0001
+,
+1000
+0100
+0010
+0001
+;

@@ -5,6 +5,7 @@ import os
 import magic
 import uuid
 from collections import namedtuple
+import glob
 from django.core.files import File
 from simfile.dir import SimfilePack, SimfileDirectory
 from simfile.timing.displaybpm import displaybpm, BeatValues
@@ -88,6 +89,17 @@ def _get_title_and_subtitles_from_full_title(full_title: str):
     return full_title, ''
 
 
+def delete_dupe_sims(simfile_pack: SimfilePack):
+    for song_dir_path in simfile_pack.simfile_dir_paths:
+        for pattern in ('*.sm', '*.ssc'):
+            fnames: list = glob.glob(pattern, root_dir=song_dir_path)
+            fnames.sort(key=str.lower)
+            # keep the first file alphabetically, delete the rest
+            for fname in fnames[1:]:
+                path = os.path.join(song_dir_path, fname)
+                os.remove(path)
+
+
 def upload_pack(
     simfile_pack: SimfilePack,
     pack_data: dict,
@@ -95,6 +107,7 @@ def upload_pack(
 ):
     pack_path = simfile_pack.pack_dir
     image_cache = {}
+    delete_dupe_sims(simfile_pack) # kind of redundant but i think it's fine
 
     p = Pack(
         name = pack_data['name'] or simfile_pack.name,

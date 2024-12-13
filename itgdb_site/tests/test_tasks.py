@@ -167,3 +167,12 @@ class ProcessPackFromWebTestClass(SerializeMixin, TestCase):
             [{'name': 'pack1'}],
             ['pack1']
         )
+    
+    def test_pack_with_dupe_sims(self, mock_upload_pack, mock_prog):
+        # test that a pack with duplicate simfiles can be handled
+        # without crashing
+        self._do_test(
+            mock_upload_pack, 'pack_with_dupe_sims.zip',
+            [{'name': 'dupes'}],
+            [None] # extracted dir name is random, don't bother checking
+        )

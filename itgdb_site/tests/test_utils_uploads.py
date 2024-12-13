@@ -1,5 +1,7 @@
 import logging
 from datetime import datetime, timezone
+import shutil
+import os
 from unittest.mock import patch
 from django.test import TestCase
 from django.utils.timezone import now
@@ -9,7 +11,7 @@ from storages.backends.s3 import S3Storage
 
 from ..models import Tag, PackCategory, Pack, ImageFile, Song, Chart
 from ..utils.uploads import upload_pack
-from ._common import open_test_pack
+from ._common import TEST_BASE_DIR, open_test_pack
 
 in_mem_storage = InMemoryStorage()
 
@@ -127,3 +129,45 @@ class UploadPackTestClass(TestCase):
         })
         pack = Pack.objects.first()
         self._check_pack(pack, pack_data)
+
+    def test_dupe_sims(self):
+        # test that duplicate simfiles are handled appropriately.
+        # the file that is first alphabetically (case-insensitive) should be
+        # kept, and the others should be deleted.
+        # in this test case, the correct simfiles should have titles containing
+        # the word "REAL" in them.
+
+        # clone the test data, since we will be deleting files in it
+        pack_copy_path = os.path.join(
+            TEST_BASE_DIR, 'packs', 'UploadPack_test_dupe_sims_COPY'
+        )
+        shutil.copytree(
+            os.path.join(TEST_BASE_DIR, 'packs', 'UploadPack_test_dupe_sims'),
+            pack_copy_path
+        )
+
+        try:
+            simfile_pack = open_test_pack('UploadPack_test_dupe_sims_COPY')
+            pack_data = {
+                'name': '',
+                'author': '',
+                'release_date': None,
+                'release_date_year_only': False,
+                'category': None,
+                'tags': [],
+                'links': ''
+            }
+
+            upload_pack(simfile_pack, pack_data)
+
+            self.assertEqual(1, len(Pack.objects.all()))
+            pack = Pack.objects.first()
+            songs = pack.song_set.all()
+            titles = set(song.title for song in songs)
+            self.assertEqual(
+                {'dupetest REAL', 'dupetest2 REAL', 'dupetest_sm REAL'},
+                titles
+            )
+        finally:
+            # clean up the cloned test data
+            shutil.rmtree(pack_copy_path)
