@@ -5,7 +5,7 @@ name = "pypi"
 
 [packages]
 celery = "==5.3.6"
-django = "==5.0"
+django = "==5.1.4"
 django-admin-extra-buttons = "==1.5.7"
 django-celery-results = "==2.5.1"
 psycopg = "==3.1.14"
