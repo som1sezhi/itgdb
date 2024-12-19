@@ -16,7 +16,8 @@ def _get_filter_accordion_active_status(form: forms.Form):
 
 
 class PackUploadForm(forms.ModelForm):
-    file = forms.FileField(label='Pack file')
+    file = forms.FileField(label='Pack file', required=False)
+    source_link = forms.CharField(label='Source link', required=False)
 
     class Meta:
         model = Pack
@@ -24,6 +25,20 @@ class PackUploadForm(forms.ModelForm):
             'name', 'author', 'release_date', 'release_date_year_only',
             'category', 'tags', 'links'
         ]
+    
+    def clean(self):
+        form_data = self.cleaned_data
+        file_exists = form_data['file'] is not None
+        source_link_exists = bool(form_data['source_link'])
+        if file_exists and source_link_exists:
+            raise forms.ValidationError(
+                'File and source link cannot both be present.'
+            )
+        elif not file_exists and not source_link_exists:
+            raise forms.ValidationError(
+                'File and source link cannot both be empty.'
+            )
+        return form_data
 
 
 class BatchUploadForm(forms.Form):

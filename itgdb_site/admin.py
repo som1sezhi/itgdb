@@ -35,20 +35,24 @@ class PackAdmin(ExtraButtonsMixin, admin.ModelAdmin):
         if req.method == 'POST':
             form = PackUploadForm(req.POST, req.FILES)
             if form.is_valid():
-                form_data = form.cleaned_data
-                file = form_data['file']
-                now = datetime.now().strftime('%Y%m%d%H%M%S')
-                path = 'packs/' + now + '_' + file.name
-                filename = default_storage.save(path, file)
+                data = form.cleaned_data
+                
+                filename = None
+                file = data['file']
+                if file:
+                    now = datetime.now().strftime('%Y%m%d%H%M%S')
+                    path = 'packs/' + now + '_' + file.name
+                    filename = default_storage.save(path, file)
+                
+                source_link = data['source_link']
 
                 # prepare form data so celery can convert it to json
-                data = form.cleaned_data
                 if data['category']:
                     data['category'] = data['category'].id
                 data['tags'] = [tag.id for tag in data['tags']]
                 del data['file']
 
-                result = process_pack_upload.delay(data, filename)
+                result = process_pack_upload.delay(data, filename, source_link)
                 
                 return HttpResponseRedirect(
                     reverse('admin:task_progress_tracker', args=(result.id,))

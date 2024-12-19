@@ -141,15 +141,37 @@ def _extract_pack(file_path):
     return extract_path
 
 
+def _get_extracted_pack_from_link(source_link, prog_tracker):
+    prog_tracker.update_progress(0, f'Downloading {source_link}')
+    # special case for google drive folder: no extract step needed
+    # TODO: maybe just put this logic in fetch_from_url (though it should then
+    # consistently return an already-extracted archive)
+    if re.match('https?://drive.google.com/drive/folders/', source_link):
+        dir_name = str(uuid.uuid4())
+        dir_path = str(settings.MEDIA_ROOT / 'extracted')
+        extract_path = os.path.join(dir_path, dir_name)
+        gdown.download_folder(source_link, output=extract_path, quiet=True)
+    else:
+        file_path = fetch_from_url(source_link)
+        filename = os.path.basename(file_path)
+        prog_tracker.update_progress(0, f'Extracting {filename}')
+        extract_path = _extract_pack(file_path)
+    return extract_path
+
+
 @shared_task(bind=True)
-def process_pack_upload(self, pack_data, filename):
-    # TODO: error handling
+def process_pack_upload(self, pack_data, filename, source_link):
+    # TODO: error handling?
 
     prog_tracker = ProgressTracker(self)
 
-    prog_tracker.update_progress(0, f'Extracting {filename}')
-    file_path = default_storage.path(filename)
-    extract_path = _extract_pack(file_path)
+    if filename:
+        prog_tracker.update_progress(0, f'Extracting {filename}')
+        file_path = default_storage.path(filename)
+        extract_path = _extract_pack(file_path)
+    else:
+        # use given source link
+        extract_path = _get_extracted_pack_from_link(source_link, prog_tracker)
 
     try:
         packs = _find_packs([pack_data['name']], extract_path)
@@ -170,21 +192,7 @@ def process_pack_upload(self, pack_data, filename):
 def process_pack_from_web(self, pack_data_list, source_link):
     prog_tracker = ProgressTracker(self)
 
-    prog_tracker.update_progress(0, f'Downloading {source_link}')
-    # special case for google drive folder: no extract step needed
-    # TODO: maybe just put this logic in fetch_from_url (though it should then
-    # consistently return an already-extracted archive)
-    if re.match('https?://drive.google.com/drive/folders/', source_link):
-        dir_name = str(uuid.uuid4())
-        dir_path = str(settings.MEDIA_ROOT / 'extracted')
-        extract_path = os.path.join(dir_path, dir_name)
-        gdown.download_folder(source_link, output=extract_path, quiet=True)
-    
-    else:
-        file_path = fetch_from_url(source_link)
-        filename = os.path.basename(file_path)
-        prog_tracker.update_progress(0, f'Extracting {filename}')
-        extract_path = _extract_pack(file_path)
+    extract_path = _get_extracted_pack_from_link(source_link, prog_tracker)
 
     try:
         pack_names = [data['name'] for data in pack_data_list]
