@@ -40,6 +40,11 @@ def _normalize_float_digits(param):
 
 
 def _minimize_measure(measure):
+    if not measure:
+        # if the measure is empty, it will cause an infinite loop in
+        # the while loop after this, so we have to catch it now
+        # TODO: figure out a more proper way of dealing with empty measures
+        raise RuntimeError('chart contains an empty measure')
     minimal = False
     while not minimal and len(measure) % 2 == 0:
         all_zeroes = True
