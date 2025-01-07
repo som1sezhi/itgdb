@@ -5,10 +5,12 @@ import json
 import re
 from django.contrib import admin
 from django.core.files.storage import default_storage
+from django.db import transaction
 from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render
 from django.urls import re_path, path, reverse
 from django.utils.dateparse import parse_datetime, parse_date
+from django.utils.html import format_html
 from django.utils.timezone import make_aware, now
 from django.contrib import messages
 from admin_extra_buttons.api import ExtraButtonsMixin, button
@@ -18,7 +20,7 @@ from celery import group
 import celery.result
 
 from .models import Tag, Pack, Song, Chart, ImageFile, PackCategory
-from .forms import PackUploadForm, BatchUploadForm, UpdateAnalysesForm
+from .forms import PackUploadForm, BatchUploadForm, UpdateAnalysesForm, ChangeReleaseDateForm
 from .tasks import process_pack_upload, process_pack_from_web, update_analyses
 
 logger = logging.getLogger(__name__)
@@ -28,6 +30,54 @@ logger = logging.getLogger(__name__)
 class PackAdmin(ExtraButtonsMixin, admin.ModelAdmin):
     search_fields = ['name']
     raw_id_fields = ['banner']
+    list_display = ['name', 'pack_actions']
+    readonly_fields = ['pack_actions']
+
+    def get_urls(self):
+        urls = super().get_urls()
+        added_urls = [
+            path(
+                'change_pack_date/<int:pack_id>',
+                self.admin_site.admin_view(self.change_pack_date),
+                name='change_pack_date'
+            ),
+        ]
+        return added_urls + urls
+    
+    def change_pack_date(self, req, pack_id):
+        context = self.get_common_context(req)
+        if req.method == 'POST':
+            form = ChangeReleaseDateForm(req.POST)
+            if form.is_valid():
+                new_release_date = form.cleaned_data['new_release_date']
+                with transaction.atomic():
+                    pack = Pack.objects.get(pk=pack_id)
+                    pack.release_date = new_release_date
+                    pack.save()
+                    Song.objects.filter(pack__id=pack_id).update(
+                        release_date=new_release_date
+                    )
+                    Chart.objects.filter(song__pack__id=pack_id).update(
+                        release_date=new_release_date
+                    )
+                messages.success(req,
+                    f'Changed release date of {pack.name} to {new_release_date}.'
+                )
+                
+                return HttpResponseRedirect(
+                    reverse('admin:itgdb_site_pack_changelist')
+                )
+        else:
+            form = ChangeReleaseDateForm()
+        context['form'] = form
+        return render(req, 'admin/itgdb_site/change_release_date.html', context)
+
+    @admin.display
+    def pack_actions(self, obj):
+        return format_html(
+            '<a class="button" href="{}">Set release date</a>',
+            reverse('admin:change_pack_date', args=(obj.id,))
+        )
 
     @button()
     def pack_upload(self, req):
@@ -187,6 +237,52 @@ class PackAdmin(ExtraButtonsMixin, admin.ModelAdmin):
 @admin.register(Song)
 class SongAdmin(ExtraButtonsMixin, admin.ModelAdmin):
     raw_id_fields = ['pack', 'banner', 'bg', 'cdtitle', 'jacket']
+    search_fields = ['title']
+    list_display = ['title', 'song_actions']
+    readonly_fields = ['song_actions']
+
+    def get_urls(self):
+        urls = super().get_urls()
+        added_urls = [
+            path(
+                'change_song_date/<int:song_id>',
+                self.admin_site.admin_view(self.change_song_date),
+                name='change_song_date'
+            ),
+        ]
+        return added_urls + urls
+    
+    def change_song_date(self, req, song_id):
+        context = self.get_common_context(req)
+        if req.method == 'POST':
+            form = ChangeReleaseDateForm(req.POST)
+            if form.is_valid():
+                new_release_date = form.cleaned_data['new_release_date']
+                with transaction.atomic():
+                    song = Song.objects.get(pk=song_id)
+                    song.release_date = new_release_date
+                    song.save()
+                    Chart.objects.filter(song__id=song_id).update(
+                        release_date=new_release_date
+                    )
+                messages.success(req,
+                    f'Changed release date of {song.title} to {new_release_date}.'
+                )
+                
+                return HttpResponseRedirect(
+                    reverse('admin:itgdb_site_song_changelist')
+                )
+        else:
+            form = ChangeReleaseDateForm()
+        context['form'] = form
+        return render(req, 'admin/itgdb_site/change_release_date.html', context)
+
+    @admin.display
+    def song_actions(self, obj):
+        return format_html(
+            '<a class="button" href="{}">Set release date</a>',
+            reverse('admin:change_song_date', args=(obj.id,))
+        )
 
     @button()
     def update_chart_analyses(self, req):
@@ -217,6 +313,12 @@ def _get_task_args_display(res):
     link = m.group(1)
     names = re.findall(r"'name': '((?:[^']|\\')*)'", args)
     return names, link
+
+
+@admin.register(Chart)
+class ChartAdmin(admin.ModelAdmin):
+    raw_id_fields = ['song']
+    search_fields = ['song__title']
 
 
 admin.site.unregister(TaskResult)
@@ -281,7 +383,6 @@ class CustomGroupResultAdmin(GroupResultAdmin):
         return render(req, 'admin/itgdb_site/progress_tracker.html', ctx)
 
 
-admin.site.register(Chart)
 admin.site.register(Tag)
 admin.site.register(ImageFile)
 admin.site.register(PackCategory)

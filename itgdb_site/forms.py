@@ -15,6 +15,12 @@ def _get_filter_accordion_active_status(form: forms.Form):
     return False
 
 
+class ChangeReleaseDateForm(forms.Form):
+    new_release_date = forms.DateTimeField(
+        label='New release date (remember to account for UTC offset)'
+    )
+
+
 class PackUploadForm(forms.ModelForm):
     file = forms.FileField(label='Pack file', required=False)
     source_link = forms.CharField(label='Source link', required=False)
