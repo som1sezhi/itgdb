@@ -165,7 +165,12 @@ class UploadPackTestClass(TestCase):
             songs = pack.song_set.all()
             titles = set(song.title for song in songs)
             self.assertEqual(
-                {'dupetest REAL', 'dupetest2 REAL', 'dupetest_sm REAL'},
+                {
+                    'dupetest REAL',
+                    'dupetest2 REAL',
+                    'dupetest_sm REAL',
+                    'dupetest_uppercase_ext REAL'
+                },
                 titles
             )
         finally:

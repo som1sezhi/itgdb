@@ -5,7 +5,8 @@ import os
 import magic
 import uuid
 from collections import namedtuple
-import glob
+import re
+import fnmatch
 from django.core.files import File
 from simfile.dir import SimfilePack, SimfileDirectory
 from simfile.timing.displaybpm import displaybpm, BeatValues
@@ -89,10 +90,15 @@ def _get_title_and_subtitles_from_full_title(full_title: str):
     return full_title, ''
 
 
+SIMFILE_FILENAME_PATTERNS = (
+    re.compile(fnmatch.translate('*.sm'), re.IGNORECASE),
+    re.compile(fnmatch.translate('*.ssc'), re.IGNORECASE)
+)
 def delete_dupe_sims(simfile_pack: SimfilePack):
     for song_dir_path in simfile_pack.simfile_dir_paths:
-        for pattern in ('*.sm', '*.ssc'):
-            fnames: list = glob.glob(pattern, root_dir=song_dir_path)
+        all_fnames = os.listdir(song_dir_path)
+        for pattern in SIMFILE_FILENAME_PATTERNS:
+            fnames = list(filter(lambda f: pattern.match(f), all_fnames))
             fnames.sort(key=str.lower)
             # keep the first file alphabetically, delete the rest
             for fname in fnames[1:]:
