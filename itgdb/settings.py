@@ -203,7 +203,7 @@ STORAGES = {
         'OPTIONS': {
             **base_bucket_storage_options,
             'location': 'sims/',
-            'default_acl': 'private',
+            'default_acl': 'public-read',
         }
     },
     'simfilemedia': {

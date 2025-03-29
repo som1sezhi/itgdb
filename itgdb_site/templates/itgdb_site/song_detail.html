@@ -92,6 +92,15 @@
         </td>
       </tr>
       {% endif %}
+      <tr>
+        <th scope="row">Simfile</th>
+        <td>
+          <a href="{{ song.simfile.url }}">
+            Link
+          </a>
+          (.{{ simfile_ext }} only, no audio)
+        </td>
+      </tr>
     </table>
     
     {% if song.has_bgchanges %}

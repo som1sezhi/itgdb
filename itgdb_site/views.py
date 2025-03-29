@@ -271,6 +271,8 @@ class SongDetailView(generic.DetailView):
             graphics_links.append(('Jacket', self.object.jacket.image.url))
         ctx['graphics_links'] = graphics_links
 
+        ctx['simfile_ext'] = self.object.simfile.name.rsplit('.', 1)[-1].lower()
+
         return ctx
 
 
