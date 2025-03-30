@@ -606,3 +606,13 @@ class ChartSearchView(generic.ListView):
         )
 
         return ctx
+
+
+class ChartViewerView(generic.DetailView):
+    model = Song
+    template_name = 'itgdb_site/chart_viewer.html'
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        ctx = super().get_context_data(**kwargs)
+
+        return ctx

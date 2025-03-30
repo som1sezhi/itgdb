@@ -19,6 +19,7 @@ services:
       - 10.0.2.20
     networks:
       - ls
+      - vite
 
   celery_worker:
     build:
@@ -36,6 +37,17 @@ services:
       - 10.0.2.20
     networks:
       - ls
+  
+  vite_dev_server:
+    build:
+      context: ./chart-viewer
+      dockerfile: ../docker/local/vite_dev_server/Dockerfile
+    volumes:
+      - ./chart-viewer:/home/node/app
+    ports:
+      - "5173:5173"
+    networks:
+      - vite
   
   db:
     image: postgres:16-alpine
@@ -75,3 +87,4 @@ networks:
     ipam:
       config:
         - subnet: 10.0.2.0/24
+  vite:

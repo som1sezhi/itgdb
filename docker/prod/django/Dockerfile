@@ -23,6 +23,16 @@ COPY Pipfile Pipfile.lock /
 WORKDIR /
 RUN pipenv install --deploy --ignore-pipfile
 
+# CHART-VIEWER BUILD STAGE ====================================
+FROM node:22-bullseye-slim as vite-builder
+
+RUN mkdir -p /app/node_modules
+WORKDIR /app
+COPY ./chart-viewer/package*.json ./
+RUN npm ci
+COPY ./chart-viewer ./
+RUN npm run build
+
 # RUNTIME STAGE ====================================
 FROM base as runtime
 
@@ -63,6 +73,9 @@ RUN chmod +x /start-celeryworker.sh
 
 COPY . /app/
 RUN mkdir /app/uploads
+
+RUN mkdir -p /app/chart-viewer/dist
+COPY --from=vite-builder /app/dist /app/chart-viewer/dist
 
 RUN useradd -m djangouser
 

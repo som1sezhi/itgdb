@@ -30,6 +30,7 @@ patool = "*"
 sentry-sdk = {extras = ["django"], version = "*"}
 python-magic = "*"
 beautifulsoup4 = "*"
+django-vite = "*"
 
 [dev-packages]
 localstack = "*"

@@ -1,0 +1,20 @@
+{% load django_vite %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=0.95">
+
+  <title>Chart view: {{ song.title }} {{ song.subtitle }} | ITGDb</title>
+
+  {% vite_hmr_client %}
+</head>
+
+<body>
+  <div id="root"></div>
+  {% vite_react_refresh %}
+  {% vite_asset 'src/main.tsx' %}
+</body>
+
+</html>

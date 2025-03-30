@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'sorl.thumbnail',
     'crispy_forms',
     'crispy_bootstrap5',
+    'django_vite',
     'django_cleanup.apps.CleanupConfig', # keep last
 ]
 
@@ -152,6 +153,10 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STATICFILES_DIRS = [
+  BASE_DIR / 'chart-viewer' / 'dist'
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -247,6 +252,14 @@ if os.environ.get('SENTRY_DSN'):
         dsn=os.environ.get('SENTRY_DSN'),
         traces_sample_rate=1.0
     )
+
+# django-vite
+DJANGO_VITE = {
+  'default': {
+    'dev_mode': DEBUG,
+    # 'dev_server_host': 'vite_dev_server'
+  }
+}
 
 # only enable debug toolbar when not running tests
 # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#disable-the-toolbar-when-running-tests-optional

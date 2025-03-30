@@ -40,7 +40,7 @@ RUN apt-get update \
     # Translations dependencies
     gettext \
     # for testing
-    iputils-ping procps strace \
+    iputils-ping procps strace curl \
     # for opening various file formats
     ffmpeg p7zip-full unrar file \
     # for mimetype guessing
