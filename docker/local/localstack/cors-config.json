@@ -1,0 +1,10 @@
+{
+    "CORSRules": [
+      {
+        "AllowedHeaders": ["*"],
+        "AllowedMethods": ["GET", "POST", "PUT"],
+        "AllowedOrigins": ["http://localhost:8000"],
+        "ExposeHeaders": ["ETag"]
+      }
+    ]
+  }
