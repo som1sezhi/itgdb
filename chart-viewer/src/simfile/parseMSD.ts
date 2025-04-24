@@ -1,4 +1,7 @@
-export function parseMSD(data: string): string[][] {
+export type MSDParams = string[][];
+export type MSDRecord = Record<string, string[]>;
+
+export function parseMSD(data: string): MSDParams {
   // basically a port of the logic from SM's MsdFile::ReadBuf()
   let readingValue = false;
   let pos = 0;

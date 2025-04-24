@@ -10,6 +10,10 @@ import tap192 from "../../assets/192nd.png";
 import receptor from "../../assets/receptor.png";
 import mine from "../../assets/mine.png";
 import lift from "../../assets/lift.png";
+import holdBody from "../../assets/hold_body.png";
+import holdBottomCap from "../../assets/hold_bottomcap.png";
+import rollBody from "../../assets/roll_body.png";
+import rollBottomCap from "../../assets/roll_bottomcap.png";
 import { Assets, Texture } from "pixi.js";
 import { useMemo } from "react";
 
@@ -26,11 +30,15 @@ const ASSET_PATHS = [
   ["receptor", receptor],
   ["mine", mine],
   ["lift", lift],
+  ["hold_body", holdBody],
+  ["hold_bottomcap", holdBottomCap],
+  ["roll_body", rollBody],
+  ["roll_bottomcap", rollBottomCap],
 ] as const;
 
 const ASSETS = ASSET_PATHS.map((item) => ({ alias: item[0], src: item[1] }));
 
-type TextureID = (typeof ASSET_PATHS)[number][0];
+export type TextureID = (typeof ASSET_PATHS)[number][0];
 
 /**
  * Load all the textures.

@@ -5,14 +5,41 @@
   flex-direction: column;
 }
 
-#top-bar {
-  background-color: gray;
+#top-bar, #bottom-bar {
+  background-color: #333;
+  color: white;
   flex: 0 0 auto;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
 }
 
 #viewport {
   flex: 1 1 auto;
-  background-color: #111111;
+  background-color: #111;
   /* needed so that viewport size is unaffected by canvas dimensions */
   overflow: hidden; 
+}
+
+.bar-item, .bar-item > label {
+  display: flex;
+  flex-direction: row;
+  gap: 0.25rem;
+}
+
+input[type=text], select {
+  background-color: #fff3;
+  color: white;
+  border-radius: 0.125rem;
+  border: 1px solid #fff5;
+}
+
+option {
+  color: initial;
+}
+
+.number-input {
+  width: 5rem;
 }
