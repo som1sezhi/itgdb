@@ -130,14 +130,14 @@ function Hold({
   );
 }
 
-export interface PlayfieldProps {
+export interface NotefieldProps {
   chart?: Chart;
   beat: number;
   scroll: ScrollSpeed;
   mini: number;
 }
 
-export function Playfield({ chart, beat, scroll, mini }: PlayfieldProps) {
+export function Notefield({ chart, beat, scroll, mini }: NotefieldProps) {
   const [ready, setReady] = useState(false);
   const { app } = useApplication();
   const lastLoadedChartRef = useRef<Chart>(undefined);

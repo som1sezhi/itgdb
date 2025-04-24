@@ -7,7 +7,7 @@ import {
 import "./App.css";
 import { Application, extend } from "@pixi/react";
 import { Container, Graphics, Sprite } from "pixi.js";
-import { Playfield, ScrollSpeed } from "./components/playfield/Playfield";
+import { Notefield, ScrollSpeed } from "./components/notefield/Notefield";
 import { Simfile } from "./simfile/Simfile";
 import { NumberInput } from "./components/NumberInput";
 
@@ -76,7 +76,7 @@ function App({ simfileURL }: { simfileURL: string }) {
       </div>
       <div id="viewport" ref={viewportRef}>
         <Application background="#000" resizeTo={viewportRef}>
-          <Playfield
+          <Notefield
             chart={simfile?.charts[chartIdx]}
             beat={beat}
             scroll={scroll}
