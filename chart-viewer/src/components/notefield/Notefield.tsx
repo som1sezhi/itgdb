@@ -1,4 +1,4 @@
-import { PixiReactElementProps, useApplication } from "@pixi/react";
+import { PixiReactElementProps } from "@pixi/react";
 import { Sprite } from "pixi.js";
 import { useState, useEffect, useMemo, Fragment, useRef } from "react";
 import { loadAssets, TextureID, useTexture } from "./useTexture";
@@ -139,7 +139,6 @@ export interface NotefieldProps {
 
 export function Notefield({ chart, beat, scroll, mini }: NotefieldProps) {
   const [ready, setReady] = useState(false);
-  const { app } = useApplication();
   const lastLoadedChartRef = useRef<Chart>(undefined);
   // The Pixi.js `Sprite`
   //const spriteRef = useRef<Sprite>(null);
@@ -193,8 +192,7 @@ export function Notefield({ chart, beat, scroll, mini }: NotefieldProps) {
 
   return (
     <pixiContainer
-      x={app.screen.width / 2 - xOff}
-      y={50}
+      x={-xOff}
       //rotation={rotation * 0}
     >
       <ReceptorRow numColumns={4} arrowSize={arrowSize} />

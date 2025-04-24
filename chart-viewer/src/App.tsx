@@ -1,15 +1,11 @@
-import {
-  PropsWithChildren,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { PropsWithChildren, useEffect, useRef, useState } from "react";
 import "./App.css";
 import { Application, extend } from "@pixi/react";
 import { Container, Graphics, Sprite } from "pixi.js";
-import { Notefield, ScrollSpeed } from "./components/notefield/Notefield";
+import { ScrollSpeed } from "./components/notefield/Notefield";
 import { Simfile } from "./simfile/Simfile";
 import { NumberInput } from "./components/NumberInput";
+import { PixiApp } from "./components/PixiApp";
 
 extend({
   Container,
@@ -76,7 +72,7 @@ function App({ simfileURL }: { simfileURL: string }) {
       </div>
       <div id="viewport" ref={viewportRef}>
         <Application background="#000" resizeTo={viewportRef}>
-          <Notefield
+          <PixiApp
             chart={simfile?.charts[chartIdx]}
             beat={beat}
             scroll={scroll}
