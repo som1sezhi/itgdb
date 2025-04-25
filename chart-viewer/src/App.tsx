@@ -71,7 +71,7 @@ function App({ simfileURL }: { simfileURL: string }) {
         <button onClick={() => setBeat(60)}>test button</button>
       </div>
       <div id="viewport" ref={viewportRef}>
-        <Application background="#000" resizeTo={viewportRef}>
+        <Application background="#777" resizeTo={viewportRef}>
           <PixiApp
             chart={simfile?.charts[chartIdx]}
             beat={beat}

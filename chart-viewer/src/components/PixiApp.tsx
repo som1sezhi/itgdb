@@ -1,14 +1,17 @@
-import { useApplication, useTick } from "@pixi/react";
 import { Notefield, NotefieldProps } from "./notefield/Notefield";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export function PixiApp(props: NotefieldProps) {
-  const { app } = useApplication();
-  const [screenWidth, setScreenWidth] = useState<number>(app.screen.width);
+  const [screenWidth, setScreenWidth] = useState<number>(window.innerWidth);
 
-  useTick(() => {
-    setScreenWidth(app.screen.width);
-  });
+  const resizeListener = useCallback(() => {
+    setScreenWidth(window.innerWidth);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("resize", resizeListener);
+    return () => window.removeEventListener("resize", resizeListener);
+  }, [resizeListener]);
 
   return (
     <>
