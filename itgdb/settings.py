@@ -14,6 +14,7 @@ import sys
 import os
 from pathlib import Path
 import logging.config
+import re
 from PIL import ImageFile
 import sentry_sdk
 
@@ -260,6 +261,13 @@ DJANGO_VITE = {
     # 'dev_server_host': 'vite_dev_server'
   }
 }
+
+# whitenoise interop with django-vite
+# https://github.com/MrBin99/django-vite?tab=readme-ov-file#whitenoise
+def immutable_file_test(path, url):
+    # Match vite (rollup)-generated hashes, à la, `some_file-CSliV9zW.js`
+    return re.match(r"^.+[.-][0-9a-zA-Z_-]{8,12}\..+$", url)
+WHITENOISE_IMMUTABLE_FILE_TEST = immutable_file_test
 
 # only enable debug toolbar when not running tests
 # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#disable-the-toolbar-when-running-tests-optional
