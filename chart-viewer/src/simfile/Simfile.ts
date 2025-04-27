@@ -1,5 +1,5 @@
 import { Chart } from "./Chart";
-import { MSDRecord, parseMSD } from "./parseMSD";
+import { MSDRecord, parseMSD } from "./msd";
 
 export class Simfile {
   charts: Chart[] = [];

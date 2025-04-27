@@ -5,7 +5,7 @@ export function parseMSD(data: string): MSDParams {
   // basically a port of the logic from SM's MsdFile::ReadBuf()
   let readingValue = false;
   let pos = 0;
-  let processed = '';
+  let processed = "";
   const len = data.length;
   const ret: string[][] = [];
 
@@ -14,61 +14,64 @@ export function parseMSD(data: string): MSDParams {
   }
 
   while (pos < len) {
-
     // skip comments
-    if (data.startsWith('//', pos)) {
+    if (data.startsWith("//", pos)) {
       do {
         pos++;
-      } while (pos < len && data[pos] !== '\r' && data[pos] !== '\n')
+      } while (pos < len && data[pos] !== "\r" && data[pos] !== "\n");
       continue;
     }
 
     // deal with unexpected # while inside a value
-    if (
-      readingValue
-      && data[pos] === '#'
+    if (readingValue && data[pos] === "#") {
       // ensure the '#' is the first non-' ' or '\t' char in this line
-      && /^.*[\r\n][ \t]*$/.test(processed)
-    ) {
-      // end the current value (strip out whitespace on the right)
-      processed = processed.replace(/[\r\n\t ]+$/, '');
-      addParam();
-      processed = '';
-      readingValue = false;
+      if (/[\r\n][ \t]*$/.test(processed)) {
+        console.log("hello", ret, processed);
+        // end the current value (strip out whitespace on the right)
+        processed = processed.replace(/[\r\n\t ]+$/, "");
+        addParam();
+        processed = "";
+        readingValue = false;
+      } else {
+        // if # is not the first non-whitespace char on this line,
+        // just read it as normal
+        processed += data[pos++];
+        continue;
+      }
     }
 
     // start a new value
-    if (!readingValue && data[pos] === '#') {
+    if (!readingValue && data[pos] === "#") {
       ret.push([]);
       readingValue = true;
     }
 
     if (!readingValue) {
-      pos += data[pos] === '\\' ? 2 : 1;
+      pos += data[pos] === "\\" ? 2 : 1;
       continue; // skip meaningless data outside a value
     }
 
     // now we can assume readingValue === true
 
-    if (data[pos] === ':' || data[pos] === ';')
+    if (data[pos] === ":" || data[pos] === ";")
       // end the current param
       addParam();
 
-    if (data[pos] === '#' || data[pos] === ':') {
+    if (data[pos] === "#" || data[pos] === ":") {
       // begin a new param
       pos++;
-      processed = '';
+      processed = "";
       continue;
     }
 
-    if (data[pos] === ';') {
+    if (data[pos] === ";") {
       // end the current value
       readingValue = false;
       pos++;
       continue;
     }
 
-    if (data[pos] === '\\')
+    if (data[pos] === "\\")
       // escape by forcing the next char to be read normally
       pos++;
 
@@ -79,8 +82,7 @@ export function parseMSD(data: string): MSDParams {
   }
 
   // add any unterminated value at end
-  if (readingValue)
-    addParam();
+  if (readingValue) addParam();
 
   return ret;
 }

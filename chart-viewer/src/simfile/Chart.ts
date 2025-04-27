@@ -1,5 +1,5 @@
 import Fraction from "fraction.js";
-import { MSDRecord } from "./parseMSD";
+import { MSDRecord } from "./msd";
 import { NoteType, NoteTypes, Note, NoteWithTail } from "./Note";
 
 const acceptedNoteTypes: string[] = Object.values(NoteTypes);
