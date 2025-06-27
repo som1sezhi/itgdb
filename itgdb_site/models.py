@@ -187,8 +187,9 @@ class Chart(models.Model):
         5: 'edit'
     }
     STEPS_TYPE_MAPPING = {v: k for k, v in STEPS_TYPE_CHOICES.items()}
-    DIFFICULTY_MAPPING = {
-        **{v: k for k, v in DIFFICULTY_CHOICES.items()},
+    DIFFICULTY_MAPPING = {v: k for k, v in DIFFICULTY_CHOICES.items()}
+    OLD_STYLE_DIFFICULTY_MAPPING = {
+        **DIFFICULTY_MAPPING,
         # see OldStyleStringToDifficultyMapHolder in Difficulty.cpp
         # in the stepmania source
         # easy
@@ -263,9 +264,35 @@ class Chart(models.Model):
         return Chart.STEPS_TYPE_MAPPING.get(steps_type.strip())
 
     @staticmethod
-    def difficulty_str_to_int(diff: str):
+    def difficulty_str_to_int(diff: str, description: str, meter: int):
         diff = diff.lower().strip()
-        return Chart.DIFFICULTY_MAPPING.get(diff)
+        # technically OLD_STYLE_DIFFICULTY_MAPPING should only be used
+        # when parsing an .sm, but i don't think it matters much for
+        # our purposes
+        diff_int_val = Chart.OLD_STYLE_DIFFICULTY_MAPPING.get(diff)
+        if diff_int_val is not None:
+            return diff_int_val
+        
+        # resolve invalid difficulty according to Steps::TidyUpData()
+        diff_int_val = Chart.DIFFICULTY_MAPPING.get(description)
+        if diff_int_val is not None:
+            return diff_int_val
+        if meter == 1:
+            return 0 # beginner
+        elif meter <= 3:
+            return 1 # easy
+        elif meter <= 6:
+            return 2 # medium
+        return 3 # hard
+    
+    @staticmethod
+    def meter_str_to_int(meter: str):
+        try:
+            return int(meter)
+        except ValueError:
+            # apparently it's possible for the meter to not be a
+            # number -- use -1 as a placeholder/fallback
+            return -1
     
     def __str__(self):
         return '[%s] %s %s (%s %s)' % (

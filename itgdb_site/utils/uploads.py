@@ -243,19 +243,15 @@ def upload_chart(chart: SimfileChart, s: Song, song_analyzer: SongAnalyzer):
     if steps_type is None:
         # ignore charts with unsupported stepstype
         return
-    difficulty = Chart.difficulty_str_to_int(chart.difficulty)
+    description = (chart.description or '').strip()
+    meter = Chart.meter_str_to_int(chart.meter)
+    difficulty = Chart.difficulty_str_to_int(chart.difficulty, description, meter)
     if difficulty is None:
         # TODO: investigate what the best way to handle this
         # should be (for now, raise an error so we can know about it).
         # NOTE: ITGmania + Simply Love seems to like putting 
         # charts with invalid difficulty in the Novice slot.
         raise ValueError(f'"{chart.difficulty}" is not a valid difficulty')
-    try:
-        meter = int(chart.meter)
-    except ValueError:
-        # apparently it's possible for the meter to not be a
-        # number -- use -1 as a placeholder/fallback
-        meter = -1
     
     chart_hash = get_hash(song_analyzer.sim, chart)
 
@@ -274,7 +270,7 @@ def upload_chart(chart: SimfileChart, s: Song, song_analyzer: SongAnalyzer):
         difficulty = difficulty,
         meter = meter,
         credit = chart.get('CREDIT') or '',
-        description = (chart.description or '').strip(),
+        description = description,
         chart_name = (chart.get('CHARTNAME') or '').strip(),
         chart_hash = chart_hash,
         analysis = analysis,
