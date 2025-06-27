@@ -274,7 +274,9 @@ class Chart(models.Model):
             return diff_int_val
         
         # resolve invalid difficulty according to Steps::TidyUpData()
-        diff_int_val = Chart.DIFFICULTY_MAPPING.get(description)
+        # note: the description should already be stripped when it gets
+        # passed in, so we don't need to strip it here.
+        diff_int_val = Chart.DIFFICULTY_MAPPING.get(description.lower())
         if diff_int_val is not None:
             return diff_int_val
         if meter == 1:

@@ -245,13 +245,9 @@ def upload_chart(chart: SimfileChart, s: Song, song_analyzer: SongAnalyzer):
         return
     description = (chart.description or '').strip()
     meter = Chart.meter_str_to_int(chart.meter)
-    difficulty = Chart.difficulty_str_to_int(chart.difficulty, description, meter)
-    if difficulty is None:
-        # TODO: investigate what the best way to handle this
-        # should be (for now, raise an error so we can know about it).
-        # NOTE: ITGmania + Simply Love seems to like putting 
-        # charts with invalid difficulty in the Novice slot.
-        raise ValueError(f'"{chart.difficulty}" is not a valid difficulty')
+    difficulty = Chart.difficulty_str_to_int(
+        chart.difficulty or '', description, meter
+    )
     
     chart_hash = get_hash(song_analyzer.sim, chart)
 

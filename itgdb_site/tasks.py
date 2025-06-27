@@ -285,7 +285,7 @@ def update_analyses(self, form_data):
                             chart.stepstype
                         ),
                         difficulty=Chart.difficulty_str_to_int(
-                            chart.difficulty, description, meter
+                            chart.difficulty or '', description, meter
                         ),
                         description=description
                     )
