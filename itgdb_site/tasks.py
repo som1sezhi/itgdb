@@ -278,14 +278,16 @@ def update_analyses(self, form_data):
                     continue
 
                 try:
+                    description = (chart.description or '').strip()
+                    meter = Chart.meter_str_to_int(chart.meter)
                     chart_obj = song.chart_set.get(
                         steps_type=Chart.steps_type_to_int(
                             chart.stepstype
                         ),
                         difficulty=Chart.difficulty_str_to_int(
-                            chart.difficulty
+                            chart.difficulty, description, meter
                         ),
-                        description=(chart.description or '').strip()
+                        description=description
                     )
                 except Chart.DoesNotExist:
                     continue
