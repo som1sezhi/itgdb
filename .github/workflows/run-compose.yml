@@ -20,6 +20,7 @@ jobs:
           script: |
             cd ~/itgdb
             git pull
+            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.CR_PAT }}
             docker compose -f docker-compose.prod.yml pull \
             && docker compose -f docker-compose.prod.yml build \
             && docker compose -f docker-compose.prod.yml up -d
