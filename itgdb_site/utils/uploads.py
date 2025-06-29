@@ -20,6 +20,8 @@ from .charts import (
     get_hash, get_assets, get_pack_banner_path, get_song_lengths
 )
 from .analysis import SongAnalyzer, get_chart_key
+from .ini import IniFile
+from .path import find_case_sensitive_path
 
 logger = get_task_logger('itgdb_site.tasks')
 
@@ -106,6 +108,13 @@ def delete_dupe_sims(simfile_pack: SimfilePack):
                 os.remove(path)
 
 
+def _get_pack_ini_if_present(pack_path: str):
+    pack_ini_path = find_case_sensitive_path(pack_path, 'Pack.ini')
+    if pack_ini_path and os.path.isfile(pack_ini_path):
+        return IniFile(pack_ini_path)
+    return None
+
+
 def upload_pack(
     simfile_pack: SimfilePack,
     pack_data: dict,
@@ -115,18 +124,44 @@ def upload_pack(
     image_cache = {}
     delete_dupe_sims(simfile_pack) # kind of redundant but i think it's fine
 
+    pack_ini = _get_pack_ini_if_present(pack_path)
+    # only use pack.ini if a non-empty version value exists
+    # (matches ITGmania behavior)
+    if pack_ini and (pack_ini.get('Group', 'Version') or '').strip('\r\n\t '):
+        pack_ini_raw = pack_ini.raw_text
+        display_title = pack_ini.get('Group', 'DisplayTitle')
+        pack_bn_path = pack_ini.get('Group', 'Banner')
+        if pack_bn_path:
+            pack_bn_path = find_case_sensitive_path(pack_path, pack_bn_path)
+    else:
+        pack_ini_raw = ''
+        display_title = None
+        pack_bn_path = None
+
     p = Pack(
-        name = pack_data['name'] or simfile_pack.name,
+        name = display_title or pack_data['name'] or simfile_pack.name,
         author = pack_data['author'],
         release_date = pack_data['release_date'],
         release_date_year_only = pack_data['release_date_year_only'],
         category_id = pack_data['category'],
-        links = pack_data['links']
+        links = pack_data['links'],
+        pack_ini = pack_ini_raw,
     )
     p.save()
+
     p.tags.add(*pack_data['tags'])
-    pack_bn_path = get_pack_banner_path(pack_path, simfile_pack)
-    p.banner = _get_image(pack_bn_path, p, image_cache, True)
+
+    # find banner file
+    banner = None
+    # first, try the path specified in pack.ini, if present
+    if pack_bn_path:
+        banner = _get_image(pack_bn_path, p, image_cache, True)
+    # if the path is not specified in pack.ini or the banner doesn't exist,
+    # fall back to the default way of fetching the pack banner
+    if banner is None:
+        pack_bn_path = get_pack_banner_path(pack_path, simfile_pack)
+        banner = _get_image(pack_bn_path, p, image_cache, True)
+    p.banner = banner
     p.save()
 
     simfile_dirs = list(simfile_pack.simfile_dirs())

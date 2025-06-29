@@ -80,6 +80,7 @@ class Pack(models.Model):
         ImageFile, on_delete=models.SET_NULL, related_name='banner_packs',
         blank=True, null=True
     )
+    pack_ini = models.TextField(blank=True)
 
     class Meta:
         constraints = [

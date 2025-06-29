@@ -2,23 +2,18 @@
 using the `simfile` library.
 """
 
-from typing import Tuple, Dict, Iterable
+from typing import Tuple, Dict
 import hashlib
 import re
 import os
-from math import isclose
 import subprocess
-from fractions import Fraction
 from simfile.types import Chart, Simfile
 from simfile.dir import SimfileDirectory, SimfilePack
-from simfile.notes import NoteData, NoteType, Note
-from simfile.notes.group import group_notes, SameBeatNotes, OrphanedNotes, NoteWithTail
 from simfile.notes.count import *
-from simfile.timing import TimingData, BeatValues, Beat
-from simfile.timing.engine import TimingEngine
 from PIL import Image
 
 from .analysis import SongAnalyzer
+from .path import find_case_sensitive_path
 
 
 IMAGE_EXTS = ('.png', '.jpg', '.jpeg', '.gif', '.bmp')
@@ -90,25 +85,6 @@ def get_hash(sim: Simfile, chart: Chart) -> str:
     return hashlib.sha1((notedata + bpms).encode()).hexdigest()
 
 
-# https://stackoverflow.com/a/37708342
-def _find_case_sensitive_path(dir: str, insensitive_path: str):
-    insensitive_path = os.path.normpath(insensitive_path)
-    insensitive_path = insensitive_path.lstrip(os.path.sep)
-
-    parts = insensitive_path.split(os.path.sep, 1)
-    next_name = parts[0]
-    for name in os.listdir(dir):
-        if next_name.lower() == name.lower():
-            improved_path = os.path.join(dir, name)
-            if len(parts) == 1:
-                return improved_path
-            else:
-                return _find_case_sensitive_path(
-                    improved_path, parts[1]
-                )
-    return None
-
-
 def _get_full_validated_asset_path(sim_dir_path: str, path: str):
     if not path:
         return None
@@ -118,7 +94,7 @@ def _get_full_validated_asset_path(sim_dir_path: str, path: str):
     # get the true, case-sensitive path to the asset.
     # we start the case-sensitive search from the pack directory so we can find
     # assets outside the simfile directory but still in the pack directory
-    full_path = _find_case_sensitive_path(
+    full_path = find_case_sensitive_path(
         pack_path, os.path.relpath(insensitive_full_path, start=pack_path)
     )
     

@@ -76,7 +76,8 @@ class UploadPackTestClass(TestCase):
         pack_data.update({
             'upload_date': now(),
             'category': self.pack_category,
-            'tags': set(self.tags)
+            'tags': set(self.tags),
+            'pack_ini': ''
         })
         pack = Pack.objects.first()
         self._check_pack(pack, pack_data)
@@ -125,7 +126,8 @@ class UploadPackTestClass(TestCase):
             'name': 'UploadPack_test_minimal_data',
             'upload_date': now(),
             'tags': set(),
-            'banner': None
+            'banner': None,
+            'pack_ini': ''
         })
         pack = Pack.objects.first()
         self._check_pack(pack, pack_data)
@@ -176,3 +178,80 @@ class UploadPackTestClass(TestCase):
         finally:
             # clean up the cloned test data
             shutil.rmtree(pack_copy_path)
+    
+    def test_pack_ini(self):
+        # test that Pack.ini is handled correctly for the standard use case.
+        # - Pack.ini display title overrides other specified names if present
+        # - Pack.ini banner path is used
+        # - Pack.ini data is stored in pack_ini column
+        simfile_pack = open_test_pack('UploadPack_test_pack_ini')
+        pack_data = {
+            'name': 'ignore this title',
+            'author': '',
+            'release_date': None,
+            'release_date_year_only': False,
+            'category': None,
+            'tags': [],
+            'links': ''
+        }
+
+        upload_pack(simfile_pack, pack_data)
+
+        self.assertEqual(1, len(Pack.objects.all()))
+        pack_data.update({
+            'name': 'test title',
+            'upload_date': now(),
+            'tags': set(),
+            'pack_ini': '''[Group]
+Version=1
+DisplayTitle=test title
+TranslitTitle=test title translit
+SortTitle=test title
+Series=test
+Year=2025
+Banner=pack_banner.png
+SyncOffset=ITG
+'''
+        })
+        pack = Pack.objects.first()
+        self._check_pack(pack, pack_data)
+        # correct banner has dimensions 100x70
+        # incorrect banner has dimensions 200x200
+        self.assertEqual(100, pack.banner.image.width)
+    
+    def test_pack_ini_do_fallback(self):
+        # test that if Pack.ini is present but has missing/broken info
+        # (missing displaytitle, broken banner path), we fall back
+        # on the default methods for finding this info.
+        simfile_pack = open_test_pack('UploadPack_test_pack_ini_do_fallback')
+        pack_data = {
+            'name': '',
+            'author': '',
+            'release_date': None,
+            'release_date_year_only': False,
+            'category': None,
+            'tags': [],
+            'links': ''
+        }
+
+        upload_pack(simfile_pack, pack_data)
+
+        self.assertEqual(1, len(Pack.objects.all()))
+        pack_data.update({
+            'name': 'UploadPack_test_pack_ini_do_fallback',
+            'upload_date': now(),
+            'tags': set(),
+            'pack_ini': '''[Group]
+Version=1
+TranslitTitle=test title translit
+SortTitle=test title
+Series=test
+Year=2025
+Banner=fake_pack_banner.png
+SyncOffset=ITG
+'''
+        })
+        pack = Pack.objects.first()
+        self._check_pack(pack, pack_data)
+        # correct banner has dimensions 100x70
+        self.assertEqual(100, pack.banner.image.width)
