@@ -3,6 +3,13 @@ FROM python:3.10-slim-buster as base
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
 
+# if this is not done, some apt-get package fetches will fail with
+# Undetermined Error for some reason
+# https://github.com/docker/for-mac/issues/6030#issuecomment-1754208413
+# ^ this is technically for a different error message but this fix seems to
+# work regardless
+RUN sed -i 's/http/https/' /etc/apt/sources.list
+
 # BUILD STAGE ====================================
 FROM base as builder
 
