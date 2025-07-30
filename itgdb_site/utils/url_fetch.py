@@ -45,7 +45,7 @@ def fetch_from_url(url: str) -> str:
         return _fetch_from_sm_online(url)
     
     # fetch from dropbox
-    elif re.match('https?://www.dropbox.com/', url):
+    elif re.match('https?://www\.dropbox\.com/', url):
         # modify URL to so it can be fetched from directly
         url = url.replace('dl=0', 'dl=1')
     
