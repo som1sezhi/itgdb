@@ -111,6 +111,13 @@ class ProcessPackFromWebTestClass(SerializeMixin, TestCase):
             str(settings.MEDIA_ROOT / 'extracted'),
             os.path.dirname(path)
         )
+    
+    def test_pack_in_songs_dir(self, mock_upload_pack, mock_prog):
+        self._do_test(
+            mock_upload_pack, '1_pack_in_songs_dir.zip',
+            [{ 'name': 'pack1' }],
+            ['pack1']
+        )
 
     def test_two_packs(self, mock_upload_pack, mock_prog):
         self._do_test(

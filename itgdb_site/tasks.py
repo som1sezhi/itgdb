@@ -95,6 +95,20 @@ def _find_packs(pack_names, extracted_path):
         if pack:
             return [pack]
     
+    # sometimes packs will contain marathons; these are often organized into
+    # Courses/ and Songs/ subdirectories.
+    # if we haven't found a pack yet, and the root extract directory
+    # contains a "Songs" subdirectory, try looking in there too
+    songs_path = os.path.join(extracted_path, 'Songs')
+    if not found_packs and os.path.isdir(songs_path):
+        # get all candidate pack directories (similar to before)
+        for name in os.listdir(songs_path):
+            subdir_path = os.path.join(songs_path, name)
+            if os.path.isdir(subdir_path):
+                pack = _open_pack_if_exists(subdir_path)
+                if pack:
+                    found_packs[name.lower()] = pack
+    
     # give an error if we didn't find enough packs
     if len(found_packs) < len(pack_names):
         raise RuntimeError(
