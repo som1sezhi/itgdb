@@ -44,8 +44,8 @@ to the following filenames:
 Change the values within these files as appropriate (fill in domain name,
 bucket credentials, etc.). Make sure to set `DEBUG` to 0.
 
-Then, log into GitHub Container Registry on the server so Docker can pull
-the Django container image during the deployment process:
+~~Then, log into GitHub Container Registry on the server so Docker can pull
+the Django container image during the deployment process:~~ This is no longer needed, as the GitHub Action should now log in automatically.
 
 ```shell
 docker login https://ghcr.io
@@ -57,7 +57,8 @@ docker login https://ghcr.io
 This project uses GitHub Actions to automate deployment. In order for the
 workflow to function, the following repository secrets need to be set:
 
-- `CR_PAT`: a Personal Access Token with `read:packages` and `write:packages` perms
+- `CR_PAT`: a Personal Access Token with `write:packages` perms
+- `CR_PAT_READ`: a Personal Access Token with `read:packages` perms
 - `SSH_HOST`: your server
 - `SSH_USERNAME`: the user to log into the server as
 - `SSH_PRIVATE_KEY`: the private key to use for the login ([instructions for setting up the SSH key pair](https://github.com/appleboy/ssh-action?tab=readme-ov-file#setting-up-a-ssh-key))
