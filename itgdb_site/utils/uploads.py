@@ -21,7 +21,7 @@ from .charts import (
 )
 from .analysis import SongAnalyzer, get_chart_key
 from .ini import IniFile
-from .path import find_case_sensitive_path
+from .path import find_case_sensitive_path, convert_path_to_os_style
 
 logger = get_task_logger('itgdb_site.tasks')
 
@@ -132,6 +132,7 @@ def upload_pack(
         display_title = pack_ini.get('Group', 'DisplayTitle')
         pack_bn_path = pack_ini.get('Group', 'Banner')
         if pack_bn_path:
+            pack_bn_path = convert_path_to_os_style(pack_bn_path)
             pack_bn_path = find_case_sensitive_path(pack_path, pack_bn_path)
     else:
         pack_ini_raw = ''

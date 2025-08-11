@@ -140,6 +140,21 @@ class GetAssetsTestClass(SimpleTestCase):
                 'DISC': None
             }
         )
+    
+    def test_windows_path(self):
+        # test that asset paths work if backslash separators are used
+        self._do_test(
+            'test_windows_path',
+            {
+                'MUSIC': 'click.ogg',
+                'BANNER': os.path.join('subdir', 'bn.png'),
+                'BACKGROUND': None,
+                'CDTITLE': None,
+                'JACKET': None,
+                'CDIMAGE': None,
+                'DISC': None
+            }
+        )
 
     def test_find_fail(self):
         # test that various failure cases are handled:

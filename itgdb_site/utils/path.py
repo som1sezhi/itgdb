@@ -1,6 +1,14 @@
 """Path utilities."""
 
 import os
+from pathlib import Path, PureWindowsPath
+
+# TODO: consider using pathlib instead of passing around paths as strings
+
+def convert_path_to_os_style(path: str) -> str:
+    """Convert a Windows or Posix-style path to the current OS-specific style"""
+    return str(Path(PureWindowsPath(path)))
+
 
 # https://stackoverflow.com/a/37708342
 def find_case_sensitive_path(dir: str, insensitive_path: str) -> str | None:

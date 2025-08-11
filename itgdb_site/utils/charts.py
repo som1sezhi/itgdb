@@ -13,7 +13,7 @@ from simfile.notes.count import *
 from PIL import Image
 
 from .analysis import SongAnalyzer
-from .path import find_case_sensitive_path
+from .path import find_case_sensitive_path, convert_path_to_os_style
 
 
 IMAGE_EXTS = ('.png', '.jpg', '.jpeg', '.gif', '.bmp')
@@ -88,7 +88,7 @@ def get_hash(sim: Simfile, chart: Chart) -> str:
 def _get_full_validated_asset_path(sim_dir_path: str, path: str):
     if not path:
         return None
-    path = path.strip()
+    path = convert_path_to_os_style(path.strip())
     pack_path = os.path.dirname(sim_dir_path)
     insensitive_full_path = os.path.normpath(os.path.join(sim_dir_path, path))
     # get the true, case-sensitive path to the asset.
