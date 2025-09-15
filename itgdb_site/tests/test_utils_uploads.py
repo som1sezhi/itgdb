@@ -10,8 +10,9 @@ from simfile.dir import SimfilePack
 from storages.backends.s3 import S3Storage
 
 from ..models import Tag, PackCategory, Pack, ImageFile, Song, Chart
-from ..utils.uploads import upload_pack
+from ..utils.uploads import upload_pack, patch_pack
 from ._common import TEST_BASE_DIR, open_test_pack
+from ..tasks import ProcessPatchResults
 
 in_mem_storage = InMemoryStorage()
 
@@ -255,3 +256,151 @@ SyncOffset=ITG
         self._check_pack(pack, pack_data)
         # correct banner has dimensions 100x70
         self.assertEqual(100, pack.banner.image.width)
+    
+
+@patch.object(S3Storage, '_save', in_mem_storage._save)
+@patch.object(S3Storage, '_open', in_mem_storage._open)
+class PatchPackTestClass(TestCase):
+    maxDiff = None
+
+    def setUp(self):
+        # disable info logs for processing songs
+        logging.disable(logging.INFO)
+
+        # the base pack has:
+        # - song1
+        #     - hard chart (4 steps)
+        #     - challenge chart (8 steps)
+        # - song2
+        #     - challenge chart (8 steps)
+        base_pack = open_test_pack('PatchPack_base')
+        self.old_release_date = datetime(2022, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        base_pack_data = {
+            'name': 'Test Pack',
+            'author': '',
+            'release_date': self.old_release_date,
+            'release_date_year_only': False,
+            'category': None,
+            'tags': [],
+            'links': ''
+        }
+        upload_pack(base_pack, base_pack_data)
+        self.pack = Pack.objects.get()
+        self.pack_id = self.pack.id
+        self.song1 = Song.objects.get(title='song1')
+        self.song2 = Song.objects.get(title='song2')
+        self.song1_chall = self.song1.chart_set.get(difficulty=4)
+        self.song2_chall = self.song2.chart_set.get(difficulty=4)
+    
+    def tearDown(self):
+        # restore previous log level
+        logging.disable(logging.NOTSET)
+    
+    def _assert_fields_equal(self, expected, actual, ignore=[]):
+        def get_field_values(instance):
+            vals = {}
+            for field in instance._meta.get_fields():
+                if field.one_to_many or field.name in ignore:
+                    continue
+                vals[field.name] = getattr(instance, field.name)
+            return vals
+        
+        expected_vals = get_field_values(expected)
+        actual_vals = get_field_values(actual)
+        self.assertEqual(expected_vals, actual_vals)
+    
+    def _assert_test_patch(self, expected_release_date):
+        self.assertEqual(1, Pack.objects.count())
+        self.assertEqual(3, Song.objects.count())
+        self.assertEqual(4, Chart.objects.count())
+
+        pack = Pack.objects.get()
+        song1 = Song.objects.get(title='song1')
+        song1_chall = song1.chart_set.get(difficulty=4)
+        song2 = Song.objects.get(title='song2')
+        song2_chall = song2.chart_set.get(difficulty=4)
+        song3 = Song.objects.get(title='song3')
+        # assert objs stayed the same
+        self._assert_fields_equal(self.pack, pack)
+        self._assert_fields_equal(self.song1, song1, ['artist', 'simfile'])
+        self._assert_fields_equal(self.song2, song2)
+        self._assert_fields_equal(
+            self.song1_chall, song1_chall,
+            [
+                'description', 'analysis', 'objects_count',
+                'steps_count', 'combo_count', 'chart_hash'
+            ]
+        )
+        self._assert_fields_equal(self.song2_chall, song2_chall)
+        # ensure pack.ini
+        self.assertEqual(
+            '''[Group]
+Version=1
+SyncOffset=ITG
+''',
+            pack.pack_ini
+        )
+        # ensure song1 and its chart are as we expect
+        self.assertEqual('new artist', song1.artist)
+        self.assertEqual(2, song1.chart_set.count())
+        song1_med = song1.chart_set.get(difficulty=2)
+        self.assertEqual(2, song1_med.steps_count)
+        self.assertEqual(expected_release_date, song1_med.release_date)
+        self.assertEqual(7, song1_chall.steps_count)
+        self.assertEqual('new desc', song1_chall.description)
+        # ensure song3 is as we expect
+        song3_chall = song3.chart_set.get(difficulty=4)
+        self.assertEqual(5, song3_chall.steps_count)
+        self.assertEqual(expected_release_date, song3.release_date)
+        self.assertEqual(expected_release_date, song3_chall.release_date)
+
+    def test_patch(self):
+        # test a regular patch
+        # - pack.ini added
+        # - song1
+        #     - updated artist metadata
+        #     - medium chart (new) (2 steps)
+        #     - no hard chart
+        #     - challenge chart (updated) (7 steps)
+        #         - new description
+        # - song3 (new)
+        #     - challenge chart (5 steps)
+
+        # check that:
+        # - pack id stays the same
+        # - pack.ini is recorded
+        # - song1 and song2's fields stay the same (including id)
+        #     - excluding song1 artist and simfile
+        # - song1's and song2's challenge chart fields stays the same
+        #     - excluding song1 challenge chart desc and note counts
+        # - song1 artist is updated
+        # - song1 has 2 charts, a medium and a challenge
+        # - song1 new medium chart inherits release date from song
+        # - song1's challenge chart has a new description and no. of steps
+        # - song3 is uploaded, with a challenge chart, and with a
+        #   release date that is the same as the pack
+
+        patch_sim_pack = open_test_pack('PatchPack_test_patch')
+        patch_params = {
+            'patch_date': None,
+            'results': ProcessPatchResults()
+        }
+        patch_pack(patch_sim_pack, self.pack, patch_params)
+        # print(patch_params['results'].results)
+
+        self._assert_test_patch(self.old_release_date)
+    
+    def test_patch_with_date(self):
+        # test a patch with a release date.
+        # - use same patch as test_patch
+        # - check that all newly-created songs/charts have the new release date
+        patch_sim_pack = open_test_pack('PatchPack_test_patch')
+        expected_date = datetime(2023, 7, 7, 12, 0, 0, tzinfo=timezone.utc)
+        patch_params = {
+            'patch_date': expected_date,
+            'results': ProcessPatchResults()
+        }
+        patch_pack(patch_sim_pack, self.pack, patch_params)
+        # print(patch_params['results'].results)
+
+        self._assert_test_patch(expected_date)

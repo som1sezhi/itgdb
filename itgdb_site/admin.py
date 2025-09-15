@@ -20,8 +20,8 @@ from celery import group
 import celery.result
 
 from .models import Tag, Pack, Song, Chart, ImageFile, PackCategory
-from .forms import PackUploadForm, BatchUploadForm, UpdateAnalysesForm, ChangeReleaseDateForm
-from .tasks import process_pack_upload, process_pack_from_web, update_analyses
+from .forms import PackUploadForm, BatchUploadForm, UpdateAnalysesForm, ChangeReleaseDateForm, UploadPatchForm
+from .tasks import process_pack_upload, process_pack_from_web, update_analyses, process_patch_upload
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,11 @@ class PackAdmin(ExtraButtonsMixin, admin.ModelAdmin):
                 'change_pack_date/<int:pack_id>',
                 self.admin_site.admin_view(self.change_pack_date),
                 name='change_pack_date'
+            ),
+            path(
+                'upload_patch/<int:pack_id>',
+                self.admin_site.admin_view(self.upload_patch),
+                name='upload_patch'
             ),
         ]
         return added_urls + urls
@@ -72,11 +77,42 @@ class PackAdmin(ExtraButtonsMixin, admin.ModelAdmin):
         context['form'] = form
         return render(req, 'admin/itgdb_site/change_release_date.html', context)
 
+    def upload_patch(self, req, pack_id):
+        context = self.get_common_context(req)
+        if req.method == 'POST':
+            form = UploadPatchForm(req.POST, req.FILES)
+            if form.is_valid():
+                params = form.cleaned_data
+
+                params['pack_id'] = pack_id
+                
+                # replace file with filename in data
+                filename = None
+                file = params['file']
+                if file:
+                    now = datetime.now().strftime('%Y%m%d%H%M%S')
+                    path = 'packs/' + now + '_' + file.name
+                    filename = default_storage.save(path, file)
+                params['file'] = filename
+
+                result = process_patch_upload.delay(params)
+                
+                return HttpResponseRedirect(
+                    reverse('admin:task_progress_tracker', args=(result.id,))
+                )
+        else:
+            form = UploadPatchForm()
+        context['form'] = form
+        return render(req, 'admin/itgdb_site/upload_patch.html', context)
+
+
     @admin.display
     def pack_actions(self, obj):
         return format_html(
-            '<a class="button" href="{}">Set release date</a>',
-            reverse('admin:change_pack_date', args=(obj.id,))
+            '<a class="button" href="{}">Set release date</a>'
+            '<a class="button" href="{}">Upload patch</a>',
+            reverse('admin:change_pack_date', args=(obj.id,)),
+            reverse('admin:upload_patch', args=(obj.id,)),
         )
 
     @button()

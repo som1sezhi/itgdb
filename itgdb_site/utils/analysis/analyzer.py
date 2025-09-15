@@ -16,6 +16,7 @@ from simfile.notes.group import group_notes, SameBeatNotes, OrphanedNotes, NoteW
 from simfile.notes.count import *
 from simfile.timing import TimingData, BeatValues, BeatValue, Beat
 from simfile.timing.engine import TimingEngine
+from ...models import Chart as ChartModel
 
 
 DEFAULT_GROUP_NOTE_TYPES = frozenset((
@@ -47,10 +48,13 @@ def get_chart_key(chart: Chart) -> Tuple[str]:
     charts of a particular song.
     """
     steps_type = (chart.stepstype or '').lower()
-    diff = (chart.difficulty or '').lower()
-    if diff == 'edit':
-        desc = (chart.description or '').lower()
-        return (steps_type, diff, desc)
+    desc = (chart.description or '').strip()
+    meter = ChartModel.meter_str_to_int(chart.meter)
+    diff = ChartModel.difficulty_str_to_int(
+        chart.difficulty or '', desc, meter
+    )
+    if diff == 5:
+        return (steps_type, diff, desc.lower())
     return (steps_type, diff)
 
 

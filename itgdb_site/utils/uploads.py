@@ -179,10 +179,80 @@ def upload_pack(
         upload_song(simfile_dir, p, image_cache)
 
 
+def patch_pack(
+    simfile_pack: SimfilePack,
+    p: Pack,
+    patch_params: dict,
+    prog_tracking_info: ProgressTrackingInfo | None = None
+):
+    pack_path = simfile_pack.pack_dir
+    image_cache = {}
+    delete_dupe_sims(simfile_pack) # kind of redundant but i think it's fine
+
+    pack_ini = _get_pack_ini_if_present(pack_path)
+    # only use pack.ini if a non-empty version value exists
+    # (matches ITGmania behavior)
+    if pack_ini and (pack_ini.get('Group', 'Version') or '').strip('\r\n\t '):
+        pack_ini_raw = pack_ini.raw_text
+        display_title = pack_ini.get('Group', 'DisplayTitle')
+        pack_bn_path = pack_ini.get('Group', 'Banner')
+        if pack_bn_path:
+            pack_bn_path = convert_path_to_os_style(pack_bn_path)
+            pack_bn_path = find_case_sensitive_path(pack_path, pack_bn_path)
+    else:
+        pack_ini_raw = ''
+        display_title = None
+        pack_bn_path = None
+    
+    if pack_ini_raw:
+        p.pack_ini = pack_ini_raw
+        if display_title:
+            p.name = display_title
+    
+    # TODO: the following code for patching the banner is not exactly the best
+    # way to do things; it will create a new imagefile in the DB even if one
+    # already exists, thus orphaning the old imagefile, unless a song uses the
+    # pack banner for its own banner, in which case the song will still be 
+    # using the old imagefile.
+    # commenting this out for now until i feel like implementing this properly.
+    # apply banner patches manually in the meantime
+    '''
+    # find banner file
+    banner = None
+    # first, try the path specified in pack.ini, if present
+    if pack_bn_path:
+        banner = _get_image(pack_bn_path, p, image_cache, True)
+    # if the path is not specified in pack.ini or the banner doesn't exist,
+    # fall back to the default way of fetching the pack banner
+    if banner is None:
+        pack_bn_path = get_pack_banner_path(pack_path, simfile_pack)
+        banner = _get_image(pack_bn_path, p, image_cache, True)
+    # only overwrite existing banner if we found a new one
+    if banner:
+        p.banner = banner
+    '''
+
+    p.save()
+
+    simfile_dirs = list(simfile_pack.simfile_dirs())
+    total_count = len(simfile_dirs)
+    for i, simfile_dir in enumerate(simfile_dirs):
+        # update progress bar, if needed
+        if prog_tracking_info:
+            prog_tracker, finished_subparts, num_subparts = prog_tracking_info
+            basename = os.path.basename(simfile_dir.simfile_dir)
+            prog_tracker.update_progress(
+                (finished_subparts + (i / total_count)) / num_subparts,
+                f'[{i + 1}/{total_count}] Processing {p.name}/{basename}'
+            )
+        upload_song(simfile_dir, p, image_cache, patch_params)
+
+
 def upload_song(
     simfile_dir: SimfileDirectory,
     p: Pack | None = None,
-    image_cache: dict | None = None
+    image_cache: dict | None = None,
+    patch_params: dict | None = None
 ):
     if image_cache is None:
         image_cache = {}
@@ -195,14 +265,6 @@ def upload_song(
     logger.info(f'Processing {p.name if p else "<single>"}/{sim.title}')
 
     song_analyzer = SongAnalyzer(sim)
-
-    music_path = assets['MUSIC']
-    if not music_path:
-        return
-    song_lengths = get_song_lengths(music_path, song_analyzer)
-    if not song_lengths:
-        return
-    music_len, chart_len = song_lengths
 
     # bit of a hack: temporarily filter out 0 bpm segments to match the 
     # behavior of stepmania
@@ -227,9 +289,48 @@ def upload_song(
         # if title is empty, stepmania pulls from the directory name instead
         basename = os.path.basename(simfile_dir.simfile_dir)
         title, subtitle = _get_title_and_subtitles_from_full_title(basename)
+    
+    # are we patching a pack?
+    existing_song = None
+    is_patching = patch_params is not None
+    if is_patching:
+        assert p is not None
+        patch_results = patch_params['results']
+        # try to match this song with an existing one based on (sub)title
+        existing_songs = p.song_set.filter(title=title, subtitle=subtitle)
+        count = existing_songs.count()
+        log_name = title + ' ' + subtitle
+        if count == 0: # song doesn't exist yet...
+            patch_results.append(log_name, 'create')
+        elif count > 1: # too many songs match the criteria
+            patch_results.append(log_name, 'skip')
+            return # bail out
+        else: # count == 1
+            patch_results.append(log_name, 'combine')
+            existing_song = existing_songs.first()
+    
+    if existing_song is not None:
+        # grab song lengths from existing song record in db
+        music_len = existing_song.music_length
+        chart_len = existing_song.chart_length
+    else:
+        # must figure out song length from file.
+        # if we're uploading this sim for the first time, we should
+        # have the song file available.
+        music_path = assets['MUSIC']
+        if not music_path:
+            if is_patching:
+                patch_results.append(log_name, 'err: no music')
+            return
+        song_lengths = get_song_lengths(music_path, song_analyzer)
+        if not song_lengths:
+            if is_patching:
+                patch_results.append(log_name, 'err: can\'t open music')
+            return
+        music_len, chart_len = song_lengths
 
     with open(sim_path, 'rb') as f:
-        s = Song(
+        fields = dict(
             pack = p,
             title = title,
             subtitle = subtitle,
@@ -244,8 +345,7 @@ def upload_song(
             max_display_bpm = disp_range[1],
             music_length = music_len,
             chart_length = chart_len,
-            release_date = p.release_date if p else None,
-            release_date_year_only = p.release_date_year_only,
+            # NOTE: we now fill in release date later
             simfile = File(f, name=f'{sim_uuid}_{sim_filename}'),
             has_bgchanges = bool((sim.bgchanges or '').strip()),
             has_fgchanges = bool((sim.fgchanges or '').strip()),
@@ -253,12 +353,44 @@ def upload_song(
             has_sm = bool(simfile_dir.sm_path),
             has_ssc = bool(simfile_dir.ssc_path),
         )
+        # if we're newly creating this song...
+        if existing_song is None:
+            # we need to fill in the release date as appropriate.
+            # if this song is newly created via a pack patch,
+            # set release date as patch release date
+            if is_patching and patch_params['patch_date']:
+                fields['release_date'] = patch_params['patch_date']
+                fields['release_date_year_only'] = False
+            # otherwise, use pack release date
+            else:
+                fields['release_date'] = p.release_date if p else None
+                fields['release_date_year_only'] = \
+                    p.release_date_year_only if p else False
+            
+            # create new song
+            s = Song(**fields)
+            s.save()
+        else:
+            # we are patching an existing song.
+            # we keep the release date already on that song and just
+            # update the rest of the fields
+            s = existing_song
+            for field, val in fields.items():
+                setattr(s, field, val)
+
         s.save()
+
         img_parent = p or s
-        s.banner = _get_image(assets['BANNER'], img_parent, image_cache, True)
-        s.bg = _get_image(assets['BACKGROUND'], img_parent, image_cache, True)
-        s.cdtitle = _get_image(assets['CDTITLE'], img_parent, image_cache)
-        s.jacket = _get_image(assets['JACKET'], img_parent, image_cache)
+        # add assets, but only if they're found (so patches that don't include
+        # asset files don't overwrite existing asset fields)
+        if banner := _get_image(assets['BANNER'], img_parent, image_cache, True):
+            s.banner = banner
+        if bg := _get_image(assets['BACKGROUND'], img_parent, image_cache, True):
+            s.bg = bg
+        if cdtitle := _get_image(assets['CDTITLE'], img_parent, image_cache):
+            s.cdtitle = cdtitle
+        if jacket := _get_image(assets['JACKET'], img_parent, image_cache):
+            s.jacket = jacket
         s.save()
 
     # upload the charts for this song.
@@ -270,11 +402,27 @@ def upload_song(
     for chart in sim.charts:
         chart_key = get_chart_key(chart)
         if chart_key not in chart_keys_already_uploaded:
-            upload_chart(chart, s, song_analyzer)
+            upload_chart(chart, s, song_analyzer, patch_params)
             chart_keys_already_uploaded.add(chart_key)
+    
+    # if we are patching, then there might be charts in diff slots that were
+    # in the old version but are no longer in the patch simfile that we just
+    # uploaded (e.g. a chart gets moved from Hard to Challenge).
+    # we thus delete these old charts
+    if is_patching:
+        for c in list(s.chart_set.all()):
+            if c.get_chart_key() not in chart_keys_already_uploaded:
+                log_name = f'[{Chart.STEPS_TYPE_CHOICES[c.steps_type]} {Chart.DIFFICULTY_CHOICES[c.difficulty]}]'
+                patch_results.append(log_name, 'delete')
+                c.delete()
 
 
-def upload_chart(chart: SimfileChart, s: Song, song_analyzer: SongAnalyzer):
+def upload_chart(
+    chart: SimfileChart,
+    s: Song,
+    song_analyzer: SongAnalyzer,
+    patch_params: dict | None = None
+):
     steps_type = Chart.steps_type_to_int(chart.stepstype)
     if steps_type is None:
         # ignore charts with unsupported stepstype
@@ -284,6 +432,26 @@ def upload_chart(chart: SimfileChart, s: Song, song_analyzer: SongAnalyzer):
     difficulty = Chart.difficulty_str_to_int(
         chart.difficulty or '', description, meter
     )
+
+    existing_chart = None
+    is_patching = patch_params is not None
+    if is_patching:
+        patch_results = patch_params['results']
+        # try to match this chart with an existing one
+        existing_charts = s.chart_set.filter(
+            steps_type=steps_type, difficulty=difficulty
+        )
+        # if an edit chart, additionally filter by description
+        if difficulty == 5:
+            existing_charts = existing_charts.filter(description=description)
+        count = existing_charts.count()
+        assert count <= 1
+        log_name = f'[{Chart.STEPS_TYPE_CHOICES[steps_type]} {Chart.DIFFICULTY_CHOICES[difficulty]}]'
+        if count == 0: # chart doesn't exist yet...
+            patch_results.append(log_name, 'new chart')
+        else: # count == 1
+            patch_results.append(log_name, 'overwrite')
+            existing_chart = existing_charts.first()
     
     chart_hash = get_hash(song_analyzer.sim, chart)
 
@@ -297,7 +465,8 @@ def upload_chart(chart: SimfileChart, s: Song, song_analyzer: SongAnalyzer):
     
     # stepmania trims whitespace from description and chartname,
     # but not credit. thanks stepmania
-    s.chart_set.create(
+    fields = dict(
+        song = s,
         steps_type = steps_type,
         difficulty = difficulty,
         meter = meter,
@@ -306,8 +475,30 @@ def upload_chart(chart: SimfileChart, s: Song, song_analyzer: SongAnalyzer):
         chart_name = (chart.get('CHARTNAME') or '').strip(),
         chart_hash = chart_hash,
         analysis = analysis,
-        release_date = s.release_date,
-        release_date_year_only = s.release_date_year_only,
+        # release_date = s.release_date,
+        # release_date_year_only = s.release_date_year_only,
         has_attacks = bool((chart.get('ATTACKS') or '').strip()),
         **counts
     )
+
+    if existing_chart is None:
+        # we need to fill in the release date as appropriate.
+        # if this chart is newly created via a pack patch,
+        # set release date as patch release date
+        if is_patching and patch_params['patch_date']:
+            fields['release_date'] = patch_params['patch_date']
+            fields['release_date_year_only'] = False
+        # otherwise, use song release date
+        else:
+            fields['release_date'] = s.release_date
+            fields['release_date_year_only'] = s.release_date_year_only
+        
+        # create new chart
+        s.chart_set.create(**fields)
+    else:
+        # we are patching an existing song.
+        # we keep the release date already on that song and just
+        # update the rest of the fields
+        for field, val in fields.items():
+            setattr(existing_chart, field, val)
+        existing_chart.save()

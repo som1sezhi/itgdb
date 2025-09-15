@@ -21,6 +21,28 @@ class ChangeReleaseDateForm(forms.Form):
     )
 
 
+class UploadPatchForm(forms.Form):
+    file = forms.FileField(label='Pack file', required=False)
+    source_link = forms.CharField(label='Source link', required=False)
+    patch_date = forms.DateTimeField(
+        label='Release date to use for new charts', required=False
+    )
+
+    def clean(self):
+        form_data = self.cleaned_data
+        file_exists = form_data['file'] is not None
+        source_link_exists = bool(form_data['source_link'])
+        if file_exists and source_link_exists:
+            raise forms.ValidationError(
+                'File and source link cannot both be present.'
+            )
+        elif not file_exists and not source_link_exists:
+            raise forms.ValidationError(
+                'File and source link cannot both be empty.'
+            )
+        return form_data
+
+
 class PackUploadForm(forms.ModelForm):
     file = forms.FileField(label='Pack file', required=False)
     source_link = forms.CharField(label='Source link', required=False)

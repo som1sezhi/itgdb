@@ -36,6 +36,7 @@ class ProgressBar {
   constructor(options) {
     this.barElem = options.barElem;
     this.barMessageElem = options.barMessageElem;
+    this.barMessageElem.style.whiteSpace = 'pre';
 
     this.barElem.style.width = '0%';
     this.barElem.style.backgroundColor = '#3280cf';
