@@ -128,8 +128,18 @@ class PackDetailView(generic.DetailView):
                     output_field=CharField()
                 ),
                 Upper('title')
+            ),
+            subtitle_sort=Coalesce(
+                Case(
+                    When(subtitle_translit__exact='', then=None),
+                    default=Upper('subtitle_translit'),
+                    output_field=CharField()
+                ),
+                Upper('subtitle')
             )
-        ).order_by('title_sort').prefetch_related('chart_set', 'banner')
+        ).order_by(
+            'title_sort', 'subtitle_sort'
+        ).prefetch_related('chart_set', 'banner')
         ctx['songs'] = songs
 
         ctx['links'] = _create_links_iterable(self.object.links)
@@ -452,19 +462,23 @@ class SongSearchView(generic.ListView):
             if data['order_by']:
                 if data['order_by'] == 'title':
                     # do case-insensitive sort
-                    order_field = Upper('title')
+                    order_fields = [Upper('title'), Upper('subtitle')]
                 else:
-                    order_field = F(data['order_by'])
+                    order_fields = [F(data['order_by'])]
             else:
-                order_field = Upper('title')
+                order_fields = [Upper('title'), Upper('subtitle')]
             if data['order_dir'] == 'desc':
-                order_field = order_field.desc(nulls_last=True)
+                order_fields = [
+                    field.desc(nulls_last=True) for field in order_fields
+                ]
             else:
-                order_field = order_field.asc(nulls_last=True)
-            qset = qset.order_by(order_field)
+                order_fields = [
+                    field.asc(nulls_last=True) for field in order_fields
+                ]
+            qset = qset.order_by(*order_fields)
 
         else:
-            qset = Song.objects.order_by(Upper('title'))
+            qset = Song.objects.order_by(Upper('title'), Upper('subtitle'))
 
         return qset
     
@@ -566,19 +580,21 @@ class ChartSearchView(generic.ListView):
             # perform ordering
             if data['order_by']:
                 if data['order_by'] == 'title':
-                    # do case-insensitive sort
-                    order_fields = [Upper('song__title')]
+                    # we let the .extend() call later on handle adding
+                    # the title fields
+                    order_fields = []
                 elif data['order_by'] == 'release_date':
-                    order_fields = [
-                        F('release_date'), Upper('song__title')
-                    ]
+                    order_fields = [F('release_date')]
                 else: # chart_length
-                    order_fields = [
-                        F('song__chart_length'), Upper('song__title')
-                    ]
+                    order_fields = [F('song__chart_length')]
             else:
-                order_fields = [Upper('song__title')]
-            order_fields.extend([F('steps_type'), F('difficulty')])
+                order_fields = []
+            order_fields.extend([
+                # case-insensitive sorting for titles
+                Upper('song__title'), Upper('song__subtitle'),
+                Upper('song__pack__name'),
+                F('steps_type'), F('difficulty')
+            ])
             if data['order_dir'] == 'desc':
                 order_fields = [
                     field.desc(nulls_last=True) for field in order_fields
@@ -590,7 +606,11 @@ class ChartSearchView(generic.ListView):
             qset = qset.order_by(*order_fields)
 
         else:
-            qset = Chart.objects.order_by(Upper('song__title'))
+            qset = Chart.objects.order_by(
+                Upper('song__title'), Upper('song__subtitle'),
+                Upper('song__pack__name'),
+                F('steps_type'), F('difficulty')
+            )
         return qset
     
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
