@@ -15,10 +15,10 @@ from asgiref.sync import async_to_sync
 import patoolib
 import gdown
 
-from .utils.uploads import upload_pack, ProgressTrackingInfo, delete_dupe_sims
+from .utils.uploads import upload_pack, patch_pack, ProgressTrackingInfo, delete_dupe_sims
 from .utils.url_fetch import fetch_from_url
 from .utils.analysis import SongAnalyzer
-from .models import Song, Chart
+from .models import Pack, Song, Chart
 
 logger = get_task_logger(__name__)
 channel_layer = get_channel_layer()
@@ -94,6 +94,20 @@ def _find_packs(pack_names, extracted_path):
         pack = _open_pack_if_exists(extracted_path)
         if pack:
             return [pack]
+    
+    # sometimes packs will contain marathons; these are often organized into
+    # Courses/ and Songs/ subdirectories.
+    # if we haven't found a pack yet, and the root extract directory
+    # contains a "Songs" subdirectory, try looking in there too
+    songs_path = os.path.join(extracted_path, 'Songs')
+    if not found_packs and os.path.isdir(songs_path):
+        # get all candidate pack directories (similar to before)
+        for name in os.listdir(songs_path):
+            subdir_path = os.path.join(songs_path, name)
+            if os.path.isdir(subdir_path):
+                pack = _open_pack_if_exists(subdir_path)
+                if pack:
+                    found_packs[name.lower()] = pack
     
     # give an error if we didn't find enough packs
     if len(found_packs) < len(pack_names):
@@ -186,6 +200,54 @@ def process_pack_upload(self, pack_data, filename, source_link):
             )
     finally:
         shutil.rmtree(extract_path)
+
+
+class ProcessPatchResults:
+    def __init__(self):
+        self.results = []
+    
+    def append(self, name, result):
+        self.results.append((name, result))
+    
+    def make_message(self):
+        return '\r\n'.join(
+            f'{name}: {result}' for name, result in self.results
+        )
+            
+
+@shared_task(bind=True)
+def process_patch_upload(self, params):
+    prog_tracker = ProgressTracker(self)
+
+    params['results'] = ProcessPatchResults()
+    filename = params['file']
+    source_link = params['source_link']
+
+    pack = Pack.objects.get(pk=params['pack_id'])
+
+    if filename:
+        prog_tracker.update_progress(0, f'Extracting {filename}')
+        file_path = default_storage.path(filename)
+        extract_path = _extract_pack(file_path)
+    else:
+        # use given source link
+        extract_path = _get_extracted_pack_from_link(source_link, prog_tracker)
+
+    try:
+        packs = _find_packs([pack.name], extract_path)
+        assert len(packs) == 1
+
+        # TODO: handle uploaded image/sim files better on rollback
+        # https://github.com/un1t/django-cleanup/issues/43
+        with transaction.atomic():
+            patch_pack(
+                packs[0], pack, params,
+                ProgressTrackingInfo(prog_tracker, 0, 1)
+            )
+    finally:
+        shutil.rmtree(extract_path)
+    
+    return params['results'].make_message()
 
 
 @shared_task(bind=True)
@@ -285,7 +347,7 @@ def update_analyses(self, form_data):
                             chart.stepstype
                         ),
                         difficulty=Chart.difficulty_str_to_int(
-                            chart.difficulty, description, meter
+                            chart.difficulty or '', description, meter
                         ),
                         description=description
                     )

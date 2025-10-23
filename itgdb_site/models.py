@@ -80,6 +80,7 @@ class Pack(models.Model):
         ImageFile, on_delete=models.SET_NULL, related_name='banner_packs',
         blank=True, null=True
     )
+    pack_ini = models.TextField(blank=True)
 
     class Meta:
         constraints = [
@@ -274,7 +275,9 @@ class Chart(models.Model):
             return diff_int_val
         
         # resolve invalid difficulty according to Steps::TidyUpData()
-        diff_int_val = Chart.DIFFICULTY_MAPPING.get(description)
+        # note: the description should already be stripped when it gets
+        # passed in, so we don't need to strip it here.
+        diff_int_val = Chart.DIFFICULTY_MAPPING.get(description.lower())
         if diff_int_val is not None:
             return diff_int_val
         if meter == 1:
@@ -317,3 +320,15 @@ class Chart(models.Model):
                 else:
                     lines_to_fields[line] = (k,)
         return {v: k for k, v in lines_to_fields.items()}
+    
+    def get_chart_key(self):
+        """Returns a tuple that we want to be unique for all
+        charts of a particular song. This should match with the output of
+        get_chart_key() from .utils.analysis.analyzer.
+        """
+        steps_type = Chart.STEPS_TYPE_CHOICES[self.steps_type].lower()
+        diff = self.difficulty
+        if diff == 5:
+            desc = (self.description or '').lower()
+            return (steps_type, diff, desc)
+        return (steps_type, diff)

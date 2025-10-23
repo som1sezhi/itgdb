@@ -1,0 +1,12 @@
+{% extends "admin/change_form.html" %}
+{% load i18n static admin_list admin_urls %}
+{% block content %}
+<h1>Upload pack patch</h1>
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  <table>
+  {{ form.as_table }}
+  </table>
+  <input type="submit" value="Submit" />
+</form>
+{% endblock %}
