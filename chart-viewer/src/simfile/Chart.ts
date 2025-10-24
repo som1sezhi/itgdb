@@ -2,9 +2,6 @@ import Fraction from "fraction.js";
 import { MSDRecord } from "./msd";
 import { NoteType, NoteTypes, Note, NoteWithTail } from "./Note";
 import {
-  BPMSegment,
-  DelaySegment,
-  FakeSegment,
   parseBPMs,
   parseDelays,
   parseFakes,
@@ -13,14 +10,19 @@ import {
   parseStops,
   parseTimeSignatures,
   parseWarps,
-  ScrollSegment,
-  SpeedSegment,
-  StopSegment,
   strToFloat,
   strToInt,
-  TimeSignatureSegment,
-  WarpSegment,
 } from "./field-parsing";
+import {
+  BPMSegment,
+  StopSegment,
+  DelaySegment,
+  WarpSegment,
+  SpeedSegment,
+  ScrollSegment,
+  FakeSegment,
+  TimeSignatureSegment,
+} from "./TimingSegment";
 // import { BeatValues } from "./field-parsing";
 
 const acceptedNoteTypes: string[] = Object.values(NoteTypes);

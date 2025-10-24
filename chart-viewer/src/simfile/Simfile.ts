@@ -29,6 +29,7 @@ import {
 
 export class Simfile {
   charts: Chart[] = [];
+  sscVersion?: number;
 
   offset: number;
   bpms: BPMSegment[];
@@ -77,10 +78,10 @@ export class Simfile {
       if (curChartProps) this.charts.push(new Chart(curChartProps, "ssc"));
 
       // set ssc-only timing data (and bpms+stops)
-      const sscVersion = strToFloat(simfileProps.VERSION?.[0] ?? "0.83");
+      this.sscVersion = strToFloat(simfileProps.VERSION?.[0] ?? "0.83");
       this.bpms = parseBPMs(simfileProps.BPMS?.[0], "ssc");
       this.stops = parseStops(simfileProps.STOPS?.[0], "ssc");
-      this.warps = parseWarps(simfileProps.WARPS?.[0], sscVersion);
+      this.warps = parseWarps(simfileProps.WARPS?.[0], this.sscVersion);
       this.speeds = parseSpeeds(simfileProps.SPEEDS?.[0]);
       this.scrolls = parseScrolls(simfileProps.SCROLLS?.[0]);
       this.fakes = parseFakes(simfileProps.FAKES?.[0]);
@@ -113,6 +114,7 @@ export class Simfile {
       this.scrolls = parseScrolls(undefined);
       this.fakes = parseFakes(undefined);
 
+      // init in preparation for smPostProcessBPMsAndStops()
       this.bpms = [];
       this.stops = [];
       this.warps = [];
