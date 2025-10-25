@@ -23,6 +23,18 @@ def _fetch_from_sm_online(url: str) -> str:
     link = soup.find('a', string='Mirror')['href']
     assert link.startswith('/static/new/')
     return fetch_from_url('https://search.stepmaniaonline.net' + link)
+
+
+def _fetch_from_sm_online_new(url: str) -> str:
+    req = urllib.request.Request(url)
+    req.add_header(
+        'User-Agent',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
+    )
+    content = urllib.request.urlopen(req).read()
+    soup = BeautifulSoup(content, 'html.parser')
+    link = soup.find('a', href=re.compile('^/download/mirror'))['href']
+    return fetch_from_url('https://stepmaniaonline.net' + link)
     
 
 def fetch_from_url(url: str) -> str:
@@ -43,6 +55,10 @@ def fetch_from_url(url: str) -> str:
     # fetch from stepmaniaonline
     elif re.match('https?://search.stepmaniaonline.net/pack/id/', url):
         return _fetch_from_sm_online(url)
+    
+    # fetch from stepmaniaonline (new site)
+    elif re.match('https?://stepmaniaonline.net/pack/', url):
+        return _fetch_from_sm_online_new(url)
     
     # fetch from dropbox
     elif re.match('https?://www.dropbox.com/', url):
