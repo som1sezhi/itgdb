@@ -1,12 +1,4 @@
-import { findGreaterThan } from "./utils";
-
-const ROWS_PER_BEAT = 48;
-function beatToRow(beat: number): number {
-  return Math.round(beat * ROWS_PER_BEAT);
-}
-function rowToBeat(row: number): number {
-  return row / ROWS_PER_BEAT;
-}
+import { beatToRow, findGreaterThan, less, rowToBeat } from "./utils";
 
 // matches TimingSegment::AreEqual()
 function almostEqual(a: number, b: number): boolean {
@@ -132,7 +124,7 @@ export function cleanUpSegments<T extends TimingSegment>(segs: T[]): T[] {
       continue;
     }
 
-    const insertIdx = findGreaterThan(newSegs, seg.row, (s) => s.row);
+    const insertIdx = findGreaterThan(newSegs, seg.row, (s) => s.row, less);
     const idx = Math.max(0, insertIdx - 1);
     const curSeg = newSegs[idx];
     const isNotable = seg.isNotable();

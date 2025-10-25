@@ -47,12 +47,6 @@ export class Simfile {
     const msd = parseMSD(data);
     const simfileProps: MSDRecord = {};
 
-    // common to sm and ssc
-    // (except for bpms and stops, which are handled differently between sm and ssc)
-    this.offset = strToFloat(simfileProps.OFFSET?.[0] ?? "0");
-    this.delays = parseDelays(simfileProps.DELAYS?.[0]);
-    this.timeSignatures = parseTimeSignatures(simfileProps.TIMESIGNATURES?.[0]);
-
     if (format === "ssc") {
       let curChartProps: MSDRecord | null = null;
 
@@ -87,7 +81,6 @@ export class Simfile {
       this.fakes = parseFakes(simfileProps.FAKES?.[0]);
     } else {
       // format === "sm"
-
       for (const param of msd) {
         // note: parseMSD guarantees that param.length > 0,
         // so we don't have to handle that case
@@ -106,18 +99,28 @@ export class Simfile {
         }
       }
 
-      // partial bpm + stops processing
-      const bpmVals = parseBPMsPartial(simfileProps.BPMS?.[0], format);
-      const stopVals = parseStopsPartial(simfileProps.STOPS?.[0], format);
       // set ssc-only timing data to default values by passing in undefined
       this.speeds = parseSpeeds(undefined);
       this.scrolls = parseScrolls(undefined);
       this.fakes = parseFakes(undefined);
-
       // init in preparation for smPostProcessBPMsAndStops()
       this.bpms = [];
       this.stops = [];
       this.warps = [];
+    }
+
+    // common to sm and ssc
+    // (except for bpms and stops, which are handled differently between sm and ssc)
+    this.offset = strToFloat(simfileProps.OFFSET?.[0] ?? "0");
+    this.delays = parseDelays(simfileProps.DELAYS?.[0]);
+    this.timeSignatures = parseTimeSignatures(simfileProps.TIMESIGNATURES?.[0]);
+
+    // we do bpm/stops processing here since we technically need
+    // the offset to be calculated beforehand
+    if (format === "sm") {
+      // partial bpm + stops processing
+      const bpmVals = parseBPMsPartial(simfileProps.BPMS?.[0], format);
+      const stopVals = parseStopsPartial(simfileProps.STOPS?.[0], format);
       // convert negative bpms and stops to warps
       // (this sets this.bpms, this.stops, and this.warps)
       this.smPostProcessBPMsAndStops(bpmVals, stopVals);
