@@ -10,8 +10,8 @@ from simfile.dir import SimfilePack
 from storages.backends.s3 import S3Storage
 
 from ..models import Tag, PackCategory, Pack, ImageFile, Song, Chart
-from ..utils.uploads import upload_pack, patch_pack
-from ._common import TEST_BASE_DIR, open_test_pack
+from ..utils.uploads import upload_pack, patch_pack, upload_song
+from ._common import TEST_BASE_DIR, open_test_pack, open_test_simfile_dir
 from ..tasks import ProcessPatchResults
 
 in_mem_storage = InMemoryStorage()
@@ -404,3 +404,40 @@ SyncOffset=ITG
         # print(patch_params['results'].results)
 
         self._assert_test_patch(expected_date)
+
+
+@patch.object(S3Storage, '_save', in_mem_storage._save)
+@patch.object(S3Storage, '_open', in_mem_storage._open)
+class UploadSongTestClass(TestCase):
+
+    def setUp(self):
+        # disable info logs for processing songs
+        logging.disable(logging.INFO)
+    
+    def tearDown(self):
+        # restore previous log level
+        logging.disable(logging.NOTSET)
+
+    def _check_song(self, actual_song, expected_data):
+        for attr, expected_attr in expected_data.items():
+            actual_attr = getattr(actual_song, attr)
+            if attr == 'upload_date':
+                # special case for upload_date: check if sufficiently close
+                # to the present (expected_attr)
+                delta = expected_attr - actual_attr
+                self.assertTrue(0 <= delta.total_seconds() <= 30)
+            else:
+                self.assertEqual(expected_attr, actual_attr)
+
+    def test_only_charts_have_bpm(self):
+        # for a simfile which does not have a #BPMS field except inside charts,
+        # make sure a chart's #BPMS field is used instead.
+        # in this case, the SX chart should be used.
+        # this also checks if 0BPM segments are filtered out for these fields
+        simfile_dir = open_test_simfile_dir('UploadSong_test_only_charts_have_bpm')
+
+        upload_song(simfile_dir)
+
+        self.assertEqual(1, len(Song.objects.all()))
+        song = Song.objects.first()
+        self._check_song(song, dict(min_bpm=100, max_bpm=105))

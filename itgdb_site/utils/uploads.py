@@ -268,15 +268,53 @@ def upload_song(
 
     # bit of a hack: temporarily filter out 0 bpm segments to match the 
     # behavior of stepmania
+    def _filter_out_0bpm_segs(bpms):
+        return str(BeatValues(
+            bpm for bpm in BeatValues.from_str(bpms) if bpm.value != 0
+        ))
     old_bpms = sim.bpms
     if old_bpms is not None:
-        sim.bpms = str(BeatValues(
-            bpm for bpm in BeatValues.from_str(old_bpms) if bpm.value != 0
-        ))
-    bpm = displaybpm(sim, ignore_specified=True)
-    disp = displaybpm(sim)
-    bpm_range = (bpm.min, bpm.max)
-    disp_range = (disp.min, disp.max)
+        sim.bpms = _filter_out_0bpm_segs(old_bpms)
+    try:
+        bpm = displaybpm(sim, ignore_specified=True)
+        disp = displaybpm(sim)
+        bpm_range = (bpm.min, bpm.max)
+        disp_range = (disp.min, disp.max)
+    except KeyError:
+        # if the simfile has no main #BPMS field, use a chart's #BPMS instead.
+        # first, figure out which chart to use.
+        # prioritize singles and higher difficulties (but leave edits for last)
+        # TODO: this might be overcomplicated for handling a case this rare.
+        # take another look later
+        chart_keys = [get_chart_key(chart) for chart in sim.charts]
+        chart_keys = sorted(
+            # filter out unknown stepstype
+            filter(
+                lambda k: Chart.steps_type_to_int(k[0]) is not None,
+                chart_keys
+            ),
+            key=lambda k: (
+                Chart.steps_type_to_int(k[0]), # singles=1 < doubles=2
+                -k[1] if k[1] <= 4 else k[1]   # diffs: -4, -3, -2, -1, 0, 5
+            )
+        )
+        bpm, disp = None, None
+        if len(chart_keys) > 0:
+            chart_analyzer = song_analyzer.chart_analyzers[chart_keys[0]]
+            chart = chart_analyzer.chart
+            old_chart_bpms = chart.get('BPMS')
+            if old_chart_bpms is not None:
+                chart.bpms = _filter_out_0bpm_segs(old_chart_bpms)
+                # this shouldn't KeyError this time
+                bpm = displaybpm(sim, chart, ignore_specified=True)
+                disp = displaybpm(sim, chart)
+                chart.bpms = old_chart_bpms # restore
+        if bpm is not None:
+            bpm_range = (bpm.min, bpm.max)
+            disp_range = (disp.min, disp.max)
+        else:
+            bpm_range = (60, 60)
+            disp_range = (60, 60)
     sim.bpms = old_bpms # restore
 
     sim_uuid = uuid.uuid4()
