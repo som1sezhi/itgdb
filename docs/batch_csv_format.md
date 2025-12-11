@@ -25,7 +25,7 @@ The header row is required to be included in the CSV, but its contents don't act
 
 ## Data rows
 
-Each row after the header consists of at least 6 comma-separated values (corresponding to columns `name`, `author`, `release_date`, `category`, `tags`, `source_link`), and usually some number of values afterwards (corresponding to columns `label1`, `link1`, `label2`, `link2`, etc.). Unless specified otherwise, all of these values are allowed be blank.
+Each row after the header consists of at least 6 comma-separated values (corresponding to columns `name`, `author`, `release_date`, `category`, `tags`, `source_link`), and usually some number of values afterwards (corresponding to columns `label1`, `link1`, `label2`, `link2`, etc.). With the exception of `source_link`, all of these values are allowed be blank.
 
 Note that values containing commas can be escaped in the CSV format by wrapping the value in double quotes. This is already handled for you if you use Google Sheets to export your data to CSV.
 
@@ -60,7 +60,7 @@ A URL where ITGdb can fetch the pack from. **This value must not be blank.**
 There is some special handing for certain URLs that allow ITGdb to download from them even if they are not direct links; these special cases are detailed below. Otherwise, the URL should be a direct link to a pack archive file (e.g. a .zip).
 
 - Google Drive file link (`https://drive.google.com/...`): ITGdb will use `gdown` (with fuzzy file ID extraction) to retrieve the file.
-- Google Drive folder link (`https://drive.google.com/drive/folders/`): ITGdb will use `gdown` to retrieve the folder. Note that this is prone to running into problems if the folder is large/has lots of items.
+- Google Drive folder link (`https://drive.google.com/drive/folders/...`): ITGdb will use `gdown` to retrieve the folder. Note that this is prone to running into problems if the folder is large/has lots of items.
 - Dropbox (`https://www.dropbox.com/...`): ITGdb can obtain a direct download link by changing the `dl=0` query parameter to `dl=1`.
 - Stepmania Online pack page (`https://stepmaniaonline.net/pack/...`): ITGdb can obtain a direct download link from the pack page.
 - ~~MEGA file link (`https://mega.nz/...`): ITGdb will use `mega.py` to retrieve the file.~~ This seems to be broken right now.
