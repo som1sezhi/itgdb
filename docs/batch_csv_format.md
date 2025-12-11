@@ -73,4 +73,4 @@ Note that `file://` URLs also work, if the packs are being stored locally for so
 
 The remaining values specify the download/information links displayed on ITGdb's pack pages. These values should alternate between the link text (e.g. "Download" or "Information") and the link URL. You may add as many links as you want. After uploading, the blank values are filtered out, and the remaining non-blank values are grouped into (label, URL) pairs.
 
-Special case: if the `label1` value is blank (thus leading to an odd number of non-blank values), the link text is auto-filled in as "Download". This allows you to just specify `link1` in the CSV to create a complete download link.
+**Special case:** if the `label1` value is blank (thus leading to an odd number of non-blank values), the link text is auto-filled in as "Download". This allows you to just specify `link1` in the CSV to create a complete download link.
