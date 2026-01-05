@@ -41,7 +41,8 @@ def chart_desc_display(chart):
     for i, line in enumerate(lines):
         line = escape(line)
         if i > 0:
-            lines[i] = f'<span class="text-muted">{line}</span>'
+            line = f'<span class="text-muted">{line}</span>'
+        lines[i] = line
     return '<br />'.join(lines)
 
 @register.filter
