@@ -266,58 +266,9 @@ def upload_song(
 
     song_analyzer = SongAnalyzer(sim)
 
-    # bit of a hack: temporarily filter out 0 bpm segments to match the 
-    # behavior of stepmania
-    def _filter_out_0bpm_segs(bpms):
-        return str(BeatValues(
-            bpm for bpm in BeatValues.from_str(bpms) if bpm.value != 0
-        ))
-    old_bpms = sim.bpms
-    if old_bpms is not None:
-        sim.bpms = _filter_out_0bpm_segs(old_bpms)
-    try:
-        bpm = displaybpm(sim, ignore_specified=True)
-        disp = displaybpm(sim)
-        bpm_range = (bpm.min, bpm.max)
-        disp_range = (disp.min, disp.max)
-    except KeyError:
-        # if the simfile has no main #BPMS field, use a chart's #BPMS instead.
-        # first, figure out which chart to use.
-        # prioritize singles and higher difficulties (but leave edits for last)
-        # TODO: this might be overcomplicated for handling a case this rare.
-        # take another look later
-        chart_keys = [get_chart_key(chart) for chart in sim.charts]
-        chart_keys = sorted(
-            # filter out unknown stepstype
-            filter(
-                lambda k: Chart.steps_type_to_int(k[0]) is not None,
-                chart_keys
-            ),
-            key=lambda k: (
-                Chart.steps_type_to_int(k[0]), # singles=1 < doubles=2
-                -k[1] if k[1] <= 4 else k[1]   # diffs: -4, -3, -2, -1, 0, 5
-            )
-        )
-        bpm, disp = None, None
-        if len(chart_keys) > 0:
-            chart_analyzer = song_analyzer.chart_analyzers[chart_keys[0]]
-            chart = chart_analyzer.chart
-            old_chart_bpms = chart.get('BPMS')
-            if old_chart_bpms is not None:
-                chart.bpms = _filter_out_0bpm_segs(old_chart_bpms)
-                # this shouldn't KeyError this time
-                bpm = displaybpm(sim, chart, ignore_specified=True)
-                disp = displaybpm(sim, chart)
-                chart.bpms = old_chart_bpms # restore
-        if bpm is not None:
-            bpm_range = (bpm.min, bpm.max)
-            disp_range = (disp.min, disp.max)
-        else:
-            bpm_range = (60, 60)
-            disp_range = (60, 60)
-    sim.bpms = old_bpms # restore
-
-    sim_uuid = uuid.uuid4()
+    # TODO: investigate why a test fails when i uncomment this
+    # (it should do nothing)
+    # bpm_range, disp_range = song_analyzer.get_bpm_ranges()
 
     # matching the behavior of TidyUpData() in Song.cpp
     title = (sim.title or '').strip()
@@ -349,6 +300,7 @@ def upload_song(
     
     if existing_song is not None:
         # grab song lengths from existing song record in db
+        # TODO: patch with song file should read from the song file instead
         music_len = existing_song.music_length
         chart_len = existing_song.chart_length
     else:
@@ -368,26 +320,16 @@ def upload_song(
         music_len, chart_len = song_lengths
 
     with open(sim_path, 'rb') as f:
+        sim_uuid = uuid.uuid4()
         fields = dict(
             pack = p,
             title = title,
             subtitle = subtitle,
             artist = artist,
-            title_translit = sim.titletranslit or '',
-            subtitle_translit = sim.subtitletranslit or '',
-            artist_translit = sim.artisttranslit or '',
-            credit = (sim.credit or '').strip(),
-            min_bpm = bpm_range[0],
-            max_bpm = bpm_range[1],
-            min_display_bpm = disp_range[0],
-            max_display_bpm = disp_range[1],
             music_length = music_len,
             chart_length = chart_len,
             # NOTE: we now fill in release date later
             simfile = File(f, name=f'{sim_uuid}_{sim_filename}'),
-            has_bgchanges = bool((sim.bgchanges or '').strip()),
-            has_fgchanges = bool((sim.fgchanges or '').strip()),
-            has_attacks = bool((sim.attacks or '').strip()),
             has_sm = bool(simfile_dir.sm_path),
             has_ssc = bool(simfile_dir.ssc_path),
         )
@@ -407,7 +349,6 @@ def upload_song(
             
             # create new song
             s = Song(**fields)
-            s.save()
         else:
             # we are patching an existing song.
             # we keep the release date already on that song and just
@@ -416,7 +357,9 @@ def upload_song(
             for field, val in fields.items():
                 setattr(s, field, val)
 
-        s.save()
+        # write the rest of the fields and save to db,
+        # and also upload all the charts of the song
+        update_song_with_simfile(sim, s, patch_params)
 
         img_parent = p or s
         # add assets, but only if they're found (so patches that don't include
@@ -430,6 +373,69 @@ def upload_song(
         if jacket := _get_image(assets['JACKET'], img_parent, image_cache):
             s.jacket = jacket
         s.save()
+
+
+def update_song_with_simfile(
+    sim: Simfile,
+    s: Song,
+    patch_params: dict | None = None
+):
+    """Update and save a Song object with data from a simfile. Only fields
+    that can be derived directly from the simfile will be written. Also
+    updates the Charts of the Song to match the simfile.
+
+    The following fields should be written to s before passing it into
+    this function:
+    - release_date, release_date_year_only
+    - music_length, chart_length
+    - has_sm, has_ssc
+    - simfile
+    """
+
+    # ensure required fields that we don't write are present,
+    # so .save() will succeed
+    assert s.music_length is not None
+    assert s.chart_length is not None
+    # not technically required but we want this to be present
+    assert bool(s.simfile)
+    # the rest are optional, so we need to trust that they were written to
+    # already, if needed
+
+    song_analyzer = SongAnalyzer(sim)
+
+    bpm_range, disp_range = song_analyzer.get_bpm_ranges()
+
+    # note: the name of the simfile directory is needed to fully match the
+    # behavior of TidyUpData() in Song.cpp, see upload_song().
+    # this is just for the probably-more-common case where title is
+    # present in the sim and we wish to update it just from the simfile
+    title = (sim.title or '').strip()
+    subtitle = (sim.subtitle or '').strip()
+    artist = (sim.artist or '').strip()
+    should_write_title = bool(title)
+
+    fields = dict(
+        title = title if should_write_title else s.title,
+        subtitle = subtitle if should_write_title else s.subtitle,
+        artist = artist,
+        title_translit = sim.titletranslit or '',
+        subtitle_translit = sim.subtitletranslit or '',
+        artist_translit = sim.artisttranslit or '',
+        credit = (sim.credit or '').strip(),
+        min_bpm = bpm_range[0],
+        max_bpm = bpm_range[1],
+        min_display_bpm = disp_range[0],
+        max_display_bpm = disp_range[1],
+        has_bgchanges = bool((sim.bgchanges or '').strip()),
+        has_fgchanges = bool((sim.fgchanges or '').strip()),
+        has_attacks = bool((sim.attacks or '').strip()),
+    )
+
+    # write fields and save
+    for field, val in fields.items():
+        setattr(s, field, val)
+
+    s.save()
 
     # upload the charts for this song.
     # try not to upload multiple charts for the same stepstype and difficulty
@@ -447,11 +453,12 @@ def upload_song(
     # in the old version but are no longer in the patch simfile that we just
     # uploaded (e.g. a chart gets moved from Hard to Challenge).
     # we thus delete these old charts
+    is_patching = patch_params is not None
     if is_patching:
         for c in list(s.chart_set.all()):
             if c.get_chart_key() not in chart_keys_already_uploaded:
                 log_name = f'[{Chart.STEPS_TYPE_CHOICES[c.steps_type]} {Chart.DIFFICULTY_CHOICES[c.difficulty]}]'
-                patch_results.append(log_name, 'delete')
+                patch_params['results'].append(log_name, 'delete')
                 c.delete()
 
 
