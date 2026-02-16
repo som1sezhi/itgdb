@@ -21,6 +21,13 @@ class ChangeReleaseDateForm(forms.Form):
     )
 
 
+class PatchSongForm(forms.Form):
+    file = forms.FileField(label='Simfile')
+    patch_date = forms.DateTimeField(
+        label='Release date to use for new charts', required=False
+    )
+
+
 class UploadPatchForm(forms.Form):
     file = forms.FileField(label='Pack file', required=False)
     source_link = forms.CharField(label='Source link', required=False)

@@ -3,25 +3,32 @@ import csv
 import logging
 import json
 import re
+import uuid
 from django.contrib import admin
+from django.core.files import File
+from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from django.core.files.storage import default_storage
 from django.db import transaction
 from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render
 from django.urls import re_path, path, reverse
 from django.utils.dateparse import parse_datetime, parse_date
+from django.utils.decorators import method_decorator
 from django.utils.html import format_html
 from django.utils.timezone import make_aware, now
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.contrib import messages
 from admin_extra_buttons.api import ExtraButtonsMixin, button
 from django_celery_results.admin import TaskResultAdmin, GroupResultAdmin
 from django_celery_results.models import TaskResult, GroupResult
 from celery import group
 import celery.result
+import simfile
 
 from .models import Tag, Pack, Song, Chart, ImageFile, PackCategory
-from .forms import PackUploadForm, BatchUploadForm, UpdateAnalysesForm, ChangeReleaseDateForm, UploadPatchForm
-from .tasks import process_pack_upload, process_pack_from_web, update_analyses, process_patch_upload
+from .forms import PackUploadForm, BatchUploadForm, UpdateAnalysesForm, ChangeReleaseDateForm, UploadPatchForm, PatchSongForm
+from .tasks import process_pack_upload, process_pack_from_web, update_analyses, process_patch_upload, ProcessPatchResults
+from .utils.uploads import update_song_with_simfile
 
 logger = logging.getLogger(__name__)
 
@@ -285,6 +292,11 @@ class SongAdmin(ExtraButtonsMixin, admin.ModelAdmin):
                 self.admin_site.admin_view(self.change_song_date),
                 name='change_song_date'
             ),
+            path(
+                'patch_song/<int:song_id>',
+                self.admin_site.admin_view(self.patch_song),
+                name='patch_song'
+            ),
         ]
         return added_urls + urls
     
@@ -313,11 +325,56 @@ class SongAdmin(ExtraButtonsMixin, admin.ModelAdmin):
         context['form'] = form
         return render(req, 'admin/itgdb_site/change_release_date.html', context)
 
+    @method_decorator(csrf_exempt)
+    def patch_song(self, req, song_id):
+        # always upload to temp file, so simfile.open() can be used for
+        # encoding autodetection
+        req.upload_handlers = [TemporaryFileUploadHandler(req)]
+        # CsrfViewMiddleware accesses req.POST and thus blocks upload_handlers
+        # from being modified, so we exempt the view initially to modify
+        # upload_handlers and then call the actual logic with CSRF protection
+        # https://docs.djangoproject.com/en/6.0/topics/http/file-uploads/#modifying-upload-handlers-on-the-fly
+        return self._patch_song(req, song_id)
+    
+    @method_decorator(csrf_protect)
+    def _patch_song(self, req, song_id):
+        context = self.get_common_context(req)
+        if req.method == 'POST':
+            form = PatchSongForm(req.POST, req.FILES)
+            if form.is_valid():
+                file = form.cleaned_data['file']
+                with transaction.atomic():
+                    song = Song.objects.get(pk=song_id)
+                    sim_uuid = uuid.uuid4()
+                    song.simfile = File(file, name=f'{sim_uuid}_{file.name}')
+
+                    path = file.temporary_file_path()
+                    sim = simfile.open(path, strict=False)
+                    patch_params = {
+                        'results': ProcessPatchResults(),
+                        'patch_date': form.cleaned_data['patch_date']
+                    }
+                    update_song_with_simfile(sim, song, patch_params)
+                messages.success(req,
+                    f'Patched song {song.title}: \r\n'
+                    + patch_params['results'].make_message()
+                )
+                
+                return HttpResponseRedirect(
+                    reverse('admin:itgdb_site_song_changelist')
+                )
+        else:
+            form = PatchSongForm()
+        context['form'] = form
+        return render(req, 'admin/itgdb_site/patch_song.html', context)
+
     @admin.display
     def song_actions(self, obj):
         return format_html(
-            '<a class="button" href="{}">Set release date</a>',
-            reverse('admin:change_song_date', args=(obj.id,))
+            '<a class="button" href="{}">Set release date</a>'
+            '<a class="button" href="{}">Patch song</a>',
+            reverse('admin:change_song_date', args=(obj.id,)),
+            reverse('admin:patch_song', args=(obj.id,))
         )
 
     @button()
