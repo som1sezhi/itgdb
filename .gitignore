@@ -1,5 +1,6 @@
 __pycache__
 .venv/
+.vscode/
 db.sqlite3
 .env
 .env.vhost
@@ -12,3 +13,8 @@ log/
 test_profile.py
 stats*
 itgdb_site/tests/simfile_dirs/profile/
+
+# in-progress stuff
+# TODO: remove when ready
+chart-viewer/
+itgdb_api/

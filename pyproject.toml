@@ -1,0 +1,47 @@
+[project]
+name = ""
+version = "0.0.1"
+requires-python = "~=3.10.0"
+dependencies = [
+    "celery==5.3.6",
+    "django==5.1.4",
+    "django-admin-extra-buttons==1.5.7",
+    "django-celery-results==2.5.1",
+    "psycopg==3.1.14",
+    "redis==5.0.1",
+    "simfile==2.1.1",
+    "boto3",
+    "django-storages",
+    "pillow",
+    "django-cleanup",
+    "opencv-python-headless",
+    "django-debug-toolbar",
+    "django-mathfilters",
+    "sorl-thumbnail",
+    "django-crispy-forms",
+    "crispy-bootstrap5",
+    "whitenoise",
+    "mega.py",
+    "gdown",
+    "channels[daphne]",
+    "channels-redis",
+    "patool",
+    "sentry-sdk[django]",
+    "python-magic",
+    "beautifulsoup4",
+]
+
+[dependency-groups]
+dev = [
+    "localstack",
+    "awscli-local[ver1]",
+    "snakeviz",
+]
+
+[tool.uv]
+package = false
+default-groups = "all"
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"

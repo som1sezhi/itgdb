@@ -13,8 +13,6 @@ RUN sed -i 's/http/https/' /etc/apt/sources.list
 # BUILD STAGE ====================================
 FROM base as builder
 
-ENV PIPENV_VENV_IN_PROJECT=1
-
 RUN apt-get update \
   # dependencies for building Python packages
   && apt-get install -y build-essential \
@@ -23,12 +21,16 @@ RUN apt-get update \
   # Translations dependencies
   gettext
 
-RUN pip install pipenv
+# obtain a pre-built uv
+COPY --from=ghcr.io/astral-sh/uv:0.10.8 /uv /uvx /bin/
 
-# install python packages in /.venv
-COPY Pipfile Pipfile.lock /
 WORKDIR /
-RUN pipenv install --deploy --ignore-pipfile
+
+# install dependencies (creates a /.venv directory)
+RUN --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --frozen --no-install-project
+
 
 # RUNTIME STAGE ====================================
 FROM base as runtime
