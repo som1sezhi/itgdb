@@ -1,0 +1,94 @@
+{% extends 'itgdb_site/base.html' %}
+
+{% block title %}Help{% endblock %}
+
+{% block content %}
+<div class="px-3 pb-5">
+
+<h1>Search help</h1>
+
+<p>
+  ITGDb allows you to search packs, songs, and charts by the following fields:
+</p>
+<ul>
+  <li>
+    For packs:
+    <ul>
+      <li><b>Pack name</b></li>
+      <li><b>Pack author(s)</b></li>
+    </ul>
+  </li>
+  <li>
+    For songs:
+    <ul>
+      <li><b>Title/artist</b> (<code>#TITLE</code>,
+        <code>#SUBTITLE</code>,
+        <code>#ARTIST</code>,
+        <code>#TITLETRANSLIT</code>,
+        <code>#SUBTITLETRANSLIT</code>,
+        <code>#ARTISTTRANSLIT</code>)
+      </li>
+      <li><b>Title</b> (<code>#TITLE</code>,
+        <code>#SUBTITLE</code>,
+        <code>#TITLETRANSLIT</code>,
+        <code>#SUBTITLETRANSLIT</code>)
+      </li>
+      <li><b>Artist</b> (<code>#ARTIST</code>, <code>#ARTISTTRANSLIT</code>)</li>
+    </ul>
+  </li>
+  <li>
+    For charts:
+    <ul>
+      <li><b>Title/artist</b> (same fields as above)</li>
+      <li><b>Title</b> (same fields as above)</li>
+      <li><b>Artist</b> (same fields as above)</li>
+      <li><b>Description</b> (chart-specific <code>#CREDIT</code>, <code>#DESCRIPTION</code>, and <code>#CHARTNAME</code> for SSC files, or just the description field for SM files)</li>
+      <li><b>Chart hash</b> (Groovestats hexadecimal hash, or a prefix thereof)</li>
+    </ul>
+  </li>
+</ul>
+
+<p>
+  You can also filter and order the results based on certain criteria. These should be fairly self-explanatory for the most part.
+</p>
+
+<p>
+  With some exceptions listed afterwards, most search queries have the following behavior:
+</p>
+<ul>
+  <li>
+    The query is split into words, and results are returned based on whether every word is present in any of the requested fields, irrespective of word order or letter case.
+  </li>
+  <li>
+    If a phrase is wrapped in double quotes <code>"like this"</code>, ITGDb will search for that exact phrase instead.
+  </li>
+  <li>
+    If a search term is preceded by a hyphen like <code>-this</code>, ITGDb will exclude all results containing that term.
+  </li>
+  <li>
+    If two search terms are connected by an <code>OR</code> (example: <code>like OR this</code>), ITGDb will return results containing either (or both) of these terms.
+  </li>
+  <li>
+    If the query text box is left empty, ITGDb will return all packs/songs/charts (subject to search filters).
+  </li>
+</ul>
+
+<p>Exceptions:</p>
+<ul>
+  <li>
+    When searching <b>Packs</b> by <b>Pack name</b>, ITGDb does a substring match instead of splitting into words; all packs that contain the query as a substring of their names get returned. None of the search operators (like double quotes and hyphens) are supported.
+    <ul>
+      <li>This is mainly intended for easily searching pack series like the Xguys1pack series, whose names don't split cleanly into words, though I'd welcome some feedback on whether or not this is a good idea.</li>
+    </ul>
+  </li>
+  <li>
+    When searching <b>Charts</b> by <b>Chart hash</b>, ITGDb will only return charts whose Groovestats hashes start with the given query (i.e. the query is a prefix of the hash). None of the search operators (like double quotes and hyphens) are supported.
+  </li>
+</ul>
+
+<p>
+  <b>Known issue</b>: The search may not behave as expected if the search terms contain certain punctuation marks, such as <code>!</code>, <code>+</code>, or <code>-</code>.
+</p>
+
+</div>
+{% endblock %}

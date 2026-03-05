@@ -10,4 +10,5 @@ urlpatterns = [
     path('pack_search/', views.PackSearchView.as_view(), name='pack_search'),
     path('song_search/', views.SongSearchView.as_view(), name='song_search'),
     path('chart_search/', views.ChartSearchView.as_view(), name='chart_search'),
+    path('help/', views.HelpView.as_view(), name='help')
 ]

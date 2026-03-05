@@ -114,6 +114,10 @@ class IndexView(generic.ListView):
         return ctx
 
 
+class HelpView(generic.TemplateView):
+    template_name = 'itgdb_site/help.html'
+
+
 class PackDetailView(generic.DetailView):
     model = Pack
     template_name = 'itgdb_site/pack_detail.html'
