@@ -13,9 +13,9 @@ docker-compose up -d
 You may then visit [http://localhost:8000/](http://localhost:8000/) to view
 the site.
 
-**Note:** This project uses Pipenv for dependency management. It may be useful
-to set up a local Pipenv environment for this project (outside of Docker), if 
-only to ease updating the Pipfile if dependencies change.
+**Note:** This project uses uv for dependency management. It may be useful
+to set up a local uv environment for this project (outside of Docker), if 
+only to ease updating the pyproject.toml and uv.lock if dependencies change.
 
 **Note:** Beware that when the localstack container shuts down, all the files
 inside get deleted.
