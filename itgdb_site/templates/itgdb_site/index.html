@@ -20,6 +20,10 @@
 <div class="ps-2 pb-4">
   <h4 class="pt-3">Recently uploaded packs</h4>
   {% include 'itgdb_site/components/pack_table.html' %}
+  <a
+    href="{% url 'itgdb_site:pack_search' %}?order_by=upload_date&order_dir=desc"
+    class="btn btn-primary btn-sm mb-4"
+  >More packs...</a>
 
   <h4 class="pt-3">What is ITGDb?</h4>
   <p>
