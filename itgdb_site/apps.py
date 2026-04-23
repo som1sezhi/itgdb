@@ -15,4 +15,4 @@ class ItgdbSiteConfig(AppConfig):
         for dir_name in ('packs', 'extracted'):
             path = str(settings.MEDIA_ROOT / dir_name)
             if not os.path.exists(path):
-                os.mkdir(path)
+                os.makedirs(path)
