@@ -54,7 +54,7 @@ services:
       - ls
   
   localstack:
-    image: localstack/localstack:latest
+    image: localstack/localstack:4.14
     ports:
       - "4566:4566"
     volumes:
