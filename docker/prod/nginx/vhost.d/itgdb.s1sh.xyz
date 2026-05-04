@@ -1,0 +1,2 @@
+# we do a lil hardcoding
+return 301 $scheme://itgdb.net$request_uri;
