@@ -77,16 +77,20 @@ def _open_pack_if_exists(dir_path):
     return simfile_pack
 
 
-def _find_packs(pack_names, extracted_path):
-
-    found_packs = {}
-    # get all candidate pack directories
-    for name in os.listdir(extracted_path):
-        subdir_path = os.path.join(extracted_path, name)
+def _try_finding_packs_in_dir(found_packs: dict, dir_path: str):
+    for name in os.listdir(dir_path):
+        subdir_path = os.path.join(dir_path, name)
         if os.path.isdir(subdir_path):
             pack = _open_pack_if_exists(subdir_path)
             if pack:
                 found_packs[name.lower()] = pack
+
+
+def _find_packs(pack_names, extracted_path):
+
+    found_packs = {}
+    # get all candidate pack directories
+    _try_finding_packs_in_dir(found_packs, extracted_path)
 
     # if we haven't found a pack yet, we can try interpreting the
     # extraction destination directory as a pack (if only 1 pack is requested)
@@ -97,17 +101,23 @@ def _find_packs(pack_names, extracted_path):
     
     # sometimes packs will contain marathons; these are often organized into
     # Courses/ and Songs/ subdirectories.
-    # if we haven't found a pack yet, and the root extract directory
-    # contains a "Songs" subdirectory, try looking in there too
-    songs_path = os.path.join(extracted_path, 'Songs')
-    if not found_packs and os.path.isdir(songs_path):
-        # get all candidate pack directories (similar to before)
-        for name in os.listdir(songs_path):
-            subdir_path = os.path.join(songs_path, name)
-            if os.path.isdir(subdir_path):
-                pack = _open_pack_if_exists(subdir_path)
-                if pack:
-                    found_packs[name.lower()] = pack
+    # if we haven't found a pack yet, try looking in those too
+    if not found_packs:
+        songs_path = os.path.join(extracted_path, 'Songs')
+        root_subdir_paths = [
+            f.path for f in os.scandir(extracted_path) if f.is_dir()
+        ]
+        # initially, look for <root extract dir>/Songs/
+        if songs_path in root_subdir_paths:
+            _try_finding_packs_in_dir(found_packs, songs_path)
+        # some packs (e.g. ECSx.5 marathons) are organized like
+        # <root extract dir>/<another dir>/Songs/
+        # where <another dir> is the only subdir of the root extract dir.
+        # look for that as well
+        elif len(root_subdir_paths) == 1:
+            subdir_songs_path = os.path.join(root_subdir_paths[0], 'Songs')
+            if os.path.isdir(subdir_songs_path):
+                _try_finding_packs_in_dir(found_packs, subdir_songs_path)
     
     # give an error if we didn't find enough packs
     if len(found_packs) < len(pack_names):

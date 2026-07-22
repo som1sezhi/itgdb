@@ -119,6 +119,13 @@ class ProcessPackFromWebTestClass(SerializeMixin, TestCase):
             ['pack1']
         )
 
+    def test_pack_in_subdir_songs_dir(self, mock_upload_pack, mock_prog):
+        self._do_test(
+            mock_upload_pack, '1_pack_in_subdir_songs_dir.zip',
+            [{ 'name': 'pack1' }],
+            ['pack1']
+        )
+
     def test_two_packs(self, mock_upload_pack, mock_prog):
         self._do_test(
             mock_upload_pack, '2_packs.zip',
