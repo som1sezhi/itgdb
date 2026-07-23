@@ -1,5 +1,6 @@
 from django.core.files.storage import storages
 from django.db import models
+from django.db.models.functions import Upper
 from django.contrib.postgres.search import SearchVector
 from django.contrib.postgres.indexes import GinIndex
 from sorl.thumbnail import get_thumbnail
@@ -153,6 +154,37 @@ class Song(models.Model):
                 name='cannot_limit_song_date_to_only_the_year_if_date_is_null'
             )
         ]
+        indexes = [
+            models.Index(
+                Upper('title'), Upper('subtitle'),
+                name='song_upper_title_subtitle_idx'
+            ),
+            models.Index(fields=['release_date']),
+            models.Index(fields=['upload_date']),
+            models.Index(fields=['chart_length']),
+            GinIndex(
+                SearchVector(
+                    'title', 'subtitle', 'title_translit', 'subtitle_translit',
+                    'artist', 'artist_translit',
+                    config='public.itgdb_search'
+                ),
+                name='song_title_artist_gin_idx'
+            ),
+            GinIndex(
+                SearchVector(
+                    'title', 'subtitle', 'title_translit', 'subtitle_translit',
+                    config='public.itgdb_search'
+                ),
+                name='song_title_gin_idx',
+            ),
+            GinIndex(
+                SearchVector(
+                    'artist', 'artist_translit',
+                    config='public.itgdb_search'
+                ),
+                name='song_artist_gin_idx',
+            )
+        ]
 
     def __str__(self):
         if self.pack:
@@ -240,6 +272,15 @@ class Chart(models.Model):
             models.Index(fields=['steps_type']),
             models.Index(fields=['difficulty']),
             models.Index(fields=['meter']),
+            models.Index(fields=['release_date']),
+            models.Index(fields=['chart_hash']),
+            GinIndex(
+                SearchVector(
+                    'credit', 'description', 'chart_name',
+                    config='public.itgdb_search'
+                ),
+                name='chart_description_gin_idx',
+            )
         ]
         constraints = [
             models.UniqueConstraint(
