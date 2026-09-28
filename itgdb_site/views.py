@@ -1,7 +1,7 @@
 from typing import Any
 from datetime import datetime, timezone, time, timedelta
-from django.db.models import Case, When, CharField, Count, Min, Max, F, FloatField, Q
-from django.db.models.functions import Coalesce, Upper, Cast
+from django.db.models import Case, When, CharField, Count, Min, Max, F, FloatField, Q, Window
+from django.db.models.functions import Coalesce, Upper, Cast, RowNumber
 from django.db.models.query import QuerySet
 from django.views import generic
 from django.contrib.postgres.search import SearchVector, SearchQuery
@@ -580,6 +580,16 @@ class ChartSearchView(generic.ListView):
                 qset = qset.filter(meter__lte=data['max_meter'])
             qset = _filter_by_min_release_date(qset, data['min_release_date'])
             qset = _filter_by_max_release_date(qset, data['max_release_date'])
+
+            if data['filter_rereleases']:
+                # annotates the earliest-released version of the chart with a
+                # row_num of 1
+                qset = qset.annotate(row_num=Window(
+                    expression=RowNumber(),
+                    partition_by='chart_hash',
+                    order_by=('release_date', 'id')
+                ))
+                qset = qset.filter(row_num=1)
 
             # perform ordering
             if data['order_by']:

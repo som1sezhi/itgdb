@@ -430,6 +430,9 @@ class ChartSearchForm(forms.Form):
         label='', required=False,
         widget=forms.TextInput(attrs={'type': 'date'})
     )
+    filter_rereleases = forms.BooleanField(
+        label='Filter out re-releases', required=False
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -507,6 +510,9 @@ class ChartSearchForm(forms.Form):
                 ),
                 Row(
                     Column('diff'),
+                ),
+                Row(
+                    Column('filter_rereleases'),
                 ),
                 active=_get_filter_accordion_active_status(self)
             ))
