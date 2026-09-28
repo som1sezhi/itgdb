@@ -1,4 +1,4 @@
-FROM python:3.10-slim-bullseye as base
+FROM python:3.10-slim-trixie as base
 
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -8,7 +8,8 @@ ENV PYTHONDONTWRITEBYTECODE 1
 # https://github.com/docker/for-mac/issues/6030#issuecomment-1754208413
 # ^ this is technically for a different error message but this fix seems to
 # work regardless
-RUN sed -i 's/http/https/' /etc/apt/sources.list
+# TODO: do we still need this?
+RUN sed -i 's/http:/https:/' /etc/apt/sources.list.d/debian.sources
 
 # BUILD STAGE ====================================
 FROM base as builder
@@ -41,7 +42,7 @@ COPY --from=builder /.venv /.venv
 ENV PATH="/.venv/bin:$PATH"
 
 # add nonfree repo section to sources (for unrar)
-RUN sed -i 's/$/ contrib non-free/' /etc/apt/sources.list
+RUN sed -i 's/^Components: main$/Components: main contrib non-free/' /etc/apt/sources.list.d/debian.sources
 
 RUN apt-get update \
     # psycopg2 dependencies
@@ -53,7 +54,7 @@ RUN apt-get update \
     # for opening various file formats
     ffmpeg p7zip-full unrar file \
     # for mimetype guessing
-    mime-support \
+    media-types \
     # cleaning up unused files
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*
