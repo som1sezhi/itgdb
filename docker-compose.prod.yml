@@ -56,6 +56,8 @@ services:
       - vhost:/etc/nginx/vhost.d
       - /var/run/docker.sock:/tmp/docker.sock:ro
       - ./log/nginx:/var/log/nginx
+    environment:
+      - ENABLE_HTTP2=false
     depends_on:
       - web
     
